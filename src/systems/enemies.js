@@ -1,10 +1,22 @@
 (function () {
-  function createEnemy(state, x, y, special) {
+  function createEnemy(state, x, y, options) {
+    if (typeof options === 'boolean') options = { fixedDrop: options };
+    options = options || {};
+
+    var info = MapSystem.queryPoint(state, x, y);
     var depth = Utils.depthAtY(y);
-    var power = 1.1 + depth * 0.018 + Utils.rand(0, 2.2);
-    var radius = Utils.clamp(GameConfig.enemies.baseRadius + power * 2.4, 10, GameConfig.enemies.maxRadius);
-    var bias = Utils.randomLetter();
-    var hue = special ? Utils.rand(38, 56) : Utils.rand(175, 235) - depth * 0.03;
+    var layerIndex = info.layerIndex || 1;
+    var danger = info.danger || 0;
+    var rewardType = options.rewardType || null;
+    var power = 1.1 + depth * 0.013 + layerIndex * 0.75 + danger * 4.2 + Utils.rand(0, 2.1);
+
+    if (rewardType === 'letter') power *= 1.1;
+    if (rewardType === 'capacity') power *= 1.32;
+    if (rewardType === 'lock') power *= 1.58;
+
+    var radius = Utils.clamp(GameConfig.enemies.baseRadius + power * 2.15, 10, GameConfig.enemies.maxRadius + (rewardType ? 8 : 0));
+    var bias = options.bias || MapSystem.pickBiasLetter(state, x, y);
+    var hue = rewardType ? 44 : Utils.rand(175, 235) - depth * 0.03;
 
     return {
       id: Math.random().toString(36).slice(2),
@@ -17,43 +29,81 @@
       power: power,
       originalPower: power,
       bias: bias,
-      fixedDrop: special,
+      fixedDrop: !!options.fixedDrop || rewardType === 'letter',
       revealed: 0,
       revealScale: 0,
       hurt: 0,
       hue: hue,
       wave: Utils.rand(0, 10),
-      special: special
+      special: !!options.fixedDrop || !!rewardType,
+      rewardType: rewardType,
+      rewardSiteId: options.rewardSiteId || null,
+      layerIndex: layerIndex,
+      regionId: info.region ? info.region.id : null,
+      highRisk: !!(info.region && info.region.highRisk)
     };
   }
 
   function spawnAroundCamera(state) {
+    var site = MapSystem.rewardSiteNearCamera(state);
+    if (site) return spawnRewardEnemy(state, site);
+    return spawnNormalEnemy(state);
+  }
+
+  function spawnRewardEnemy(state, site) {
+    if (MapSystem.isBlocked(state, site.x, site.y, 28)) return false;
+    var enemy = createEnemy(state, site.x, site.y, {
+      rewardType: site.type,
+      rewardSiteId: site.id,
+      bias: site.letter,
+      fixedDrop: site.type === 'letter'
+    });
+    enemy.vx *= 0.25;
+    enemy.vy *= 0.25;
+    enemy.power += site.layerIndex * 1.6;
+    enemy.originalPower = enemy.power;
+    enemy.radius += site.type === 'lock' ? 9 : site.type === 'capacity' ? 5 : 2;
+    state.enemies.push(enemy);
+    MapSystem.markRewardSpawned(state, site.id);
+    return true;
+  }
+
+  function spawnNormalEnemy(state) {
     var config = GameConfig.enemies;
     var w = state.screen.width;
     var h = state.screen.height;
-    var side = Math.random();
-    var x;
-    var y;
 
-    if (side < 0.42) {
-      x = state.camera.x + Utils.rand(-w * 0.58, w * 0.58);
-      y = state.camera.y + h * 0.55 + Utils.rand(20, config.spawnMargin);
-    } else if (side < 0.72) {
-      x = state.camera.x + (Math.random() < 0.5 ? -w * 0.58 : w * 0.58) + Utils.rand(-config.spawnMargin, config.spawnMargin);
-      y = state.camera.y + Utils.rand(-h * 0.52, h * 0.58);
-    } else {
-      x = state.camera.x + Utils.rand(-w * 0.55, w * 0.55);
-      y = state.camera.y - h * 0.55 - Utils.rand(20, config.spawnMargin * 0.7);
+    for (var attempt = 0; attempt < 10; attempt += 1) {
+      var side = Math.random();
+      var x;
+      var y;
+
+      if (side < 0.44) {
+        x = state.camera.x + Utils.rand(-w * 0.58, w * 0.58);
+        y = state.camera.y + h * 0.55 + Utils.rand(20, config.spawnMargin);
+      } else if (side < 0.74) {
+        x = state.camera.x + (Math.random() < 0.5 ? -w * 0.58 : w * 0.58) + Utils.rand(-config.spawnMargin, config.spawnMargin);
+        y = state.camera.y + Utils.rand(-h * 0.52, h * 0.58);
+      } else {
+        x = state.camera.x + Utils.rand(-w * 0.55, w * 0.55);
+        y = state.camera.y - h * 0.55 - Utils.rand(20, config.spawnMargin * 0.7);
+      }
+
+      y = Utils.clamp(y, 20, state.map.height - 160);
+      x = MapSystem.clampToWorldX(state, x, 42);
+      if (MapSystem.isBlocked(state, x, y, 32)) continue;
+      state.enemies.push(createEnemy(state, x, y, {}));
+      return true;
     }
 
-    var depth = Utils.depthAtY(y);
-    var specialChance = Utils.clamp(config.specialChance + depth / 5000, config.specialChance, 0.18);
-    state.enemies.push(createEnemy(state, x, y, Math.random() < specialChance));
+    return false;
   }
 
   function ensurePopulation(state) {
-    while (state.enemies.length < GameConfig.enemies.targetCount) {
+    var guard = 0;
+    while (state.enemies.length < GameConfig.enemies.targetCount && guard < GameConfig.enemies.targetCount * 3) {
       spawnAroundCamera(state);
+      guard += 1;
     }
   }
 
@@ -67,21 +117,23 @@
     state.enemies = state.enemies.filter(function (enemy) {
       enemy.wave += state.dt;
       enemy.angle += Math.sin(enemy.wave * 1.2) * state.dt * 0.4;
-      enemy.vx += Math.cos(enemy.wave) * state.dt * 8;
-      enemy.vy += Math.sin(enemy.wave * 0.7) * state.dt * 5;
-      enemy.vx *= 0.992;
-      enemy.vy *= 0.992;
+      enemy.vx += Math.cos(enemy.wave) * state.dt * (enemy.rewardType ? 4 : 8);
+      enemy.vy += Math.sin(enemy.wave * 0.7) * state.dt * (enemy.rewardType ? 3 : 5);
+      enemy.vx *= enemy.rewardType ? 0.986 : 0.992;
+      enemy.vy *= enemy.rewardType ? 0.986 : 0.992;
       enemy.x += enemy.vx * state.dt;
       enemy.y += enemy.vy * state.dt;
+      enemy.x = MapSystem.clampToWorldX(state, enemy.x, enemy.radius);
       enemy.revealed = Math.max(0, enemy.revealed - state.dt);
       enemy.hurt = Math.max(0, enemy.hurt - state.dt);
       enemy.revealScale = Utils.lerp(enemy.revealScale, enemy.revealed > 0 ? 1 : 0, 0.14);
 
-      return Math.abs(enemy.x - state.camera.x) < maxDistX && Math.abs(enemy.y - state.camera.y) < maxDistY;
+      var keep = Math.abs(enemy.x - state.camera.x) < maxDistX && Math.abs(enemy.y - state.camera.y) < maxDistY;
+      if (!keep && enemy.rewardSiteId) MapSystem.releaseRewardSite(state, enemy.rewardSiteId);
+      return keep;
     });
 
     updateBoss(state);
-
     maybeSpawnBoss(state, player);
   }
 
@@ -90,14 +142,19 @@
     if (!boss) return;
     var player = state.player;
     var toPlayer = Utils.normalize(player.x - boss.x, player.y - boss.y);
+    var toHome = Utils.normalize(boss.homeX - boss.x, boss.homeY - boss.y);
+    var distHome = Math.sqrt(Math.pow(boss.x - boss.homeX, 2) + Math.pow(boss.y - boss.homeY, 2));
     boss.wave += state.dt;
     boss.angle = Math.atan2(toPlayer.y, toPlayer.x);
-    boss.vx += toPlayer.x * state.dt * 34 + Math.cos(boss.wave * 1.8) * state.dt * 48;
-    boss.vy += toPlayer.y * state.dt * 24 + Math.sin(boss.wave * 1.3) * state.dt * 30;
-    boss.vx *= 0.986;
-    boss.vy *= 0.986;
+    boss.vx += toPlayer.x * state.dt * 36 + toHome.x * state.dt * Utils.clamp(distHome, 0, 620) * 0.34;
+    boss.vy += toPlayer.y * state.dt * 28 + toHome.y * state.dt * Utils.clamp(distHome, 0, 620) * 0.34;
+    boss.vx += Math.cos(boss.wave * 1.8) * state.dt * 46;
+    boss.vy += Math.sin(boss.wave * 1.3) * state.dt * 30;
+    boss.vx *= 0.984;
+    boss.vy *= 0.984;
     boss.x += boss.vx * state.dt;
     boss.y += boss.vy * state.dt;
+    boss.x = MapSystem.clampToWorldX(state, boss.x, boss.radius);
     boss.revealed = Math.max(0, boss.revealed - state.dt);
     boss.hurt = Math.max(0, boss.hurt - state.dt);
     boss.revealScale = Utils.lerp(boss.revealScale, 1, 0.08);
@@ -106,24 +163,29 @@
 
   function maybeSpawnBoss(state, player) {
     if (state.boss.active) return;
-    var depth = Utils.depthAtY(player.y);
-    if (depth < state.boss.depth - 18) return;
+    var gate = MapSystem.nextBossGate(state);
+    if (!gate) return;
+    if (player.y < gate.y - 520) return;
+    if (gate.bypassed && !gate.final) return;
 
-    var y = player.y + state.screen.height * 0.42;
-    var boss = createEnemy(state, player.x + Utils.rand(-120, 120), y, true);
-    boss.id = 'boss-' + state.boss.defeated;
+    var boss = createEnemy(state, gate.x, gate.y - 34, { fixedDrop: true, bias: Utils.pick(['b', 'o', 's', 's', Utils.randomLetter()]) });
+    boss.id = 'boss-' + gate.id;
     boss.boss = true;
-    boss.radius = 62 + state.boss.defeated * 8;
-    boss.power = 13 + state.boss.depth * 0.05 + state.boss.defeated * 7;
+    boss.gateId = gate.id;
+    boss.homeX = gate.x;
+    boss.homeY = gate.y - 34;
+    boss.radius = gate.final ? 84 : 62 + gate.layerIndex * 7;
+    boss.power = (gate.final ? 32 : 14) + gate.layerIndex * 9 + Utils.depthAtY(gate.y) * 0.033;
     boss.originalPower = boss.power;
-    boss.bias = Utils.pick(['b', 'o', 's', 's', Utils.randomLetter()]);
-    boss.hue = 325;
+    boss.bias = gate.final ? 'z' : boss.bias;
+    boss.hue = gate.final ? 285 : 325;
     state.boss.active = boss;
     state.boss.notice = 3;
-    GameUI.toast(state, 'Boss current detected', 'Defeat it to evolve the genome');
+    GameUI.toast(state, gate.final ? 'Final gate locked' : 'Boss gate detected', gate.final ? 'Defeat it to clear the run' : 'Defeat it for a genome reward, or find the sprint gap');
   }
 
   function removeEnemy(state, target) {
+    if (target.rewardSiteId && !target.consumed) MapSystem.releaseRewardSite(state, target.rewardSiteId);
     state.enemies = state.enemies.filter(function (enemy) { return enemy !== target; });
     if (state.boss.active === target) state.boss.active = null;
   }

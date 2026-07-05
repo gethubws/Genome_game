@@ -39,7 +39,9 @@
       genome: {
         capacity: config.initialGenomeCapacity,
         letters: [],
-        lastAddedAt: 0
+        lastAddedAt: 0,
+        lockedBlocks: [],
+        maxLockedBlocks: config.map.maxLockedBlocks
       },
       words: {
         found: [],
@@ -61,6 +63,24 @@
       bullets: [],
       particles: [],
       floatingTexts: [],
+      map: {
+        seed: '',
+        width: config.map.worldWidth,
+        height: config.map.layerCount * config.map.layerHeight,
+        layers: [],
+        regions: [],
+        walls: [],
+        gates: [],
+        currentLayer: 1,
+        completed: false
+      },
+      recommendation: {
+        dirty: true,
+        signature: '',
+        target: null,
+        missing: [],
+        bestRegion: null
+      },
       boss: {
         depth: config.bossDepthStep,
         active: null,

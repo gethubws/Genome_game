@@ -6,6 +6,7 @@
     var canvas = document.getElementById('gameCanvas');
     state = GameState.create(canvas);
     RenderSystem.resize(state);
+    MapSystem.generate(state);
     seedOpeningGenome(state);
     InputSystem.setup(state);
     GameUI.init(state);
@@ -31,6 +32,7 @@
       DashSkill.update(state);
       ScanSkill.update(state);
       ShotSkill.update(state);
+      MapSystem.update(state);
       EnemySystem.update(state);
       CombatSystem.update(state);
       RenderSystem.updateCamera(state);

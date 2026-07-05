@@ -21,6 +21,20 @@
       maxRadius: 36,
       specialChance: 0.09
     },
+    map: {
+      layerCount: 4,
+      layerHeight: 3600,
+      worldWidth: 2200,
+      regionCountMin: 5,
+      regionCountMax: 7,
+      dangerRegionsMin: 1,
+      dangerRegionsMax: 2,
+      wallBandThickness: 116,
+      gateGapWidth: 280,
+      bypassGapWidth: 42,
+      rewardCounts: [2, 4, 8, 16],
+      maxLockedBlocks: 2
+    },
     skills: {
       scan: { cooldown: 4.8, duration: 0.82, radius: 350, revealTime: 2.0 },
       dash: { cooldown: 3.2, duration: 0.46, speed: 540, maxBoost: 1.85 },
