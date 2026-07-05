@@ -33,6 +33,8 @@
   }
 
   function consume(state, enemy) {
+    if (enemy.consumed) return;
+    enemy.consumed = true;
     var depth = Utils.depthAtY(enemy.y);
     var letter = GenomeSystem.rollDropLetter(enemy, depth);
 
@@ -49,6 +51,10 @@
 
     if (enemy.boss) {
       defeatBoss(state, enemy);
+    }
+
+    if (enemy.rewardSiteId) {
+      MapSystem.claimRewardSite(state, enemy.rewardSiteId);
     }
 
     EnemySystem.removeEnemy(state, enemy);
