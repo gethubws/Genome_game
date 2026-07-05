@@ -49,6 +49,8 @@
       maxLife: 1
     });
 
+    applyRewardEnemyEffect(state, enemy);
+
     if (enemy.boss) {
       defeatBoss(state, enemy);
     }
@@ -59,6 +61,21 @@
 
     EnemySystem.removeEnemy(state, enemy);
     state.uiDirty = true;
+  }
+
+  function applyRewardEnemyEffect(state, enemy) {
+    if (enemy.rewardType !== 'capacity') return;
+    var before = state.genome.capacity;
+    GenomeSystem.expandCapacity(state, 1);
+    if (state.genome.capacity <= before) return;
+    state.floatingTexts.push({
+      x: enemy.x,
+      y: enemy.y - 24,
+      text: '+1 slot',
+      color: GameConfig.palette.gold,
+      life: 1,
+      maxLife: 1
+    });
   }
 
   function hitPlayer(state, enemy) {
