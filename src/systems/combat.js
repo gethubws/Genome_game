@@ -37,6 +37,8 @@
     enemy.consumed = true;
     var depth = Utils.depthAtY(enemy.y);
     var letter = GenomeSystem.rollDropLetter(enemy, depth);
+    var lockBeforeDrop = enemy.rewardType === 'lock';
+    if (lockBeforeDrop) applyRewardEnemyEffect(state, enemy);
 
     GenomeSystem.addLetter(state, letter, enemy.boss ? 'boss' : 'enemy');
     ShotSkill.burst(state, enemy.x, enemy.y, enemy.fixedDrop ? GameConfig.palette.gold : state.player.accent, enemy.boss ? 32 : 14);
@@ -49,7 +51,7 @@
       maxLife: 1
     });
 
-    applyRewardEnemyEffect(state, enemy);
+    if (!lockBeforeDrop) applyRewardEnemyEffect(state, enemy);
 
     if (enemy.boss) {
       defeatBoss(state, enemy);
@@ -64,6 +66,24 @@
   }
 
   function applyRewardEnemyEffect(state, enemy) {
+    if (enemy.rewardType === 'lock') {
+      var block = GenomeSystem.lockCurrentWordBlock(state);
+      if (!block) {
+        GameUI.toast(state, 'No word block locked', 'Build a word in the current genome first');
+        return;
+      }
+      GameUI.toast(state, 'Word block locked', block.word.toUpperCase() + ' will resist queue pressure');
+      state.floatingTexts.push({
+        x: enemy.x,
+        y: enemy.y - 24,
+        text: 'lock ' + block.word.toUpperCase(),
+        color: GameConfig.palette.gold,
+        life: 1,
+        maxLife: 1
+      });
+      return;
+    }
+
     if (enemy.rewardType !== 'capacity') return;
     var before = state.genome.capacity;
     GenomeSystem.expandCapacity(state, 1);

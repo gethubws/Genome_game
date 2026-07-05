@@ -70,6 +70,9 @@
       var letter = state.genome.letters[i] || '';
       var cell = document.createElement('span');
       cell.className = 'gene-slot' + (letter ? ' filled' : '');
+      if (letter && GenomeSystem.isLockedIndex(state.genome, i)) {
+        cell.className += ' locked';
+      }
       if (letter && i === state.genome.letters.length - 1 && state.time - state.genome.lastAddedAt < 0.4) {
         cell.className += ' new';
       }

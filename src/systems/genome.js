@@ -67,10 +67,11 @@
     return removed;
   }
 
-  function lockExpressedWord(state) {
+  function lockCurrentWordBlock(state) {
     var genome = state.genome;
     if (genome.lockedBlocks.length >= genome.maxLockedBlocks) return null;
-    var candidates = state.words.occurrences.slice().sort(function (a, b) {
+    WordSystem.preview(state);
+    var candidates = state.words.potentialOccurrences.slice().sort(function (a, b) {
       if (a.word.text.length !== b.word.text.length) return b.word.text.length - a.word.text.length;
       return a.index - b.index;
     });
@@ -137,7 +138,7 @@
     getSequence: getSequence,
     letterScore: letterScore,
     isLockedIndex: isLockedIndex,
-    lockExpressedWord: lockExpressedWord,
+    lockCurrentWordBlock: lockCurrentWordBlock,
     removeFrontFactors: removeFrontFactors
   };
 })();
