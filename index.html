@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gene Current Arcade</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="game-shell">
+    <canvas id="gameCanvas" aria-label="Gene Current game canvas"></canvas>
+
+    <button class="hud corner-button menu-button" type="button" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+    <button class="hud corner-button settings-button" type="button" aria-label="Settings">*</button>
+
+    <section class="hud hud-top" aria-label="Run status">
+      <div class="stage-badge">
+        <span>Stage</span>
+        <strong>07</strong>
+      </div>
+      <div class="metric metric-depth">
+        <span>Depth</span>
+        <strong id="depthValue">0m</strong>
+      </div>
+      <div class="metric metric-power">
+        <span>Power</span>
+        <strong id="combatValue">1.0</strong>
+      </div>
+      <div class="metric metric-genome">
+        <span>Genome</span>
+        <strong id="capacityValue">0 / 20</strong>
+      </div>
+      <div class="metric metric-expression accent">
+        <span>Expression</span>
+        <strong id="multiplierValue">x1.00</strong>
+      </div>
+    </section>
+
+    <section class="hud word-panel" aria-label="Expression panel">
+      <div class="panel-title">
+        <span>Expression</span>
+        <small id="wordSummary">none yet</small>
+      </div>
+      <div id="wordList" class="word-list"></div>
+      <div class="expression-footer">
+        <span>Next multiplier</span>
+        <i></i>
+      </div>
+    </section>
+
+    <section class="hud genome-panel" aria-label="Genome queue">
+      <div class="panel-title genome-title">
+        <span>Genome Queue</span>
+        <small id="letterHint">scan, choose, descend</small>
+      </div>
+      <div class="queue-row">
+        <span class="queue-label">Incoming</span>
+        <div id="genomeSlots" class="genome-slots"></div>
+      </div>
+      <div class="queue-row outgoing-row">
+        <span class="queue-label">Outgoing</span>
+        <div class="ghost-slots" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span><span></span>
+        </div>
+      </div>
+      <div class="letter-timer"><i></i><span>new letter current</span></div>
+    </section>
+
+    <section class="hud ability-panel" aria-label="Abilities">
+      <div class="panel-title ability-title"><span>Skills</span></div>
+      <button class="ability scan-ability" id="scanButton" type="button" data-ability="scan">
+        <span class="icon">O</span>
+        <span class="label">Scan</span>
+        <span class="cooldown" id="scanCooldown">ready</span>
+        <span class="meter"><i></i></span>
+      </button>
+      <button class="ability dash-ability" id="dashButton" type="button" data-ability="dash">
+        <span class="icon">&gt;&gt;</span>
+        <span class="label">Dash</span>
+        <span class="cooldown" id="dashCooldown">ready</span>
+        <span class="meter"><i></i></span>
+      </button>
+      <button class="ability shot-ability" id="shotButton" type="button" data-ability="shot">
+        <span class="icon">*</span>
+        <span class="label">Shoot</span>
+        <span class="cooldown" id="shotCooldown">ready</span>
+        <span class="meter"><i></i></span>
+      </button>
+    </section>
+
+    <section class="hud boss-panel" id="bossPanel" aria-label="Boss alert">
+      <span>Boss Current</span>
+      <strong id="bossStatus">300m</strong>
+    </section>
+
+    <section class="toast-stack" id="toastStack" aria-live="polite"></section>
+
+    <section class="evolution-modal" id="evolutionModal" aria-label="Evolution result">
+      <div class="evolution-card">
+        <small>Evolution Current</small>
+        <h1 id="evolutionTitle">Genome Expanded</h1>
+        <p id="evolutionBody">New letters entered the current.</p>
+        <div class="reward-row" id="rewardRow"></div>
+        <button id="continueButton" type="button">Dive On</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="src/core/config.js"></script>
+  <script src="src/core/utils.js"></script>
+  <script src="src/core/state.js"></script>
+  <script src="src/systems/words.js"></script>
+  <script src="src/systems/input.js"></script>
+  <script src="src/systems/enemies.js"></script>
+  <script src="src/systems/genome.js"></script>
+  <script src="src/systems/combat.js"></script>
+  <script src="src/skills/scan.js"></script>
+  <script src="src/skills/dash.js"></script>
+  <script src="src/skills/shot.js"></script>
+  <script src="src/ui/hud.js"></script>
+  <script src="src/systems/render.js"></script>
+  <script src="src/game.js"></script>
+</body>
+</html>
