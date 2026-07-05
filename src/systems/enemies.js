@@ -22,6 +22,9 @@
       id: Math.random().toString(36).slice(2),
       x: x,
       y: y,
+      homeX: options.homeX || x,
+      homeY: options.homeY || y,
+      territoryRadius: options.territoryRadius || (rewardType ? 430 : 0),
       vx: Utils.rand(-28, 28),
       vy: Utils.rand(-12, 18),
       angle: Utils.rand(-Math.PI, Math.PI),
@@ -57,7 +60,10 @@
       rewardType: site.type,
       rewardSiteId: site.id,
       bias: site.letter,
-      fixedDrop: site.type === 'letter'
+      fixedDrop: site.type === 'letter',
+      homeX: site.x,
+      homeY: site.y,
+      territoryRadius: 470 + site.layerIndex * 35
     });
     enemy.vx *= 0.25;
     enemy.vy *= 0.25;
@@ -112,12 +118,14 @@
     ensurePopulation(state);
 
     var player = state.player;
+    var playerPower = CombatSystem.effectivePower(state);
     var maxDistX = state.screen.width / 2 + GameConfig.enemies.despawnMargin;
     var maxDistY = state.screen.height / 2 + GameConfig.enemies.despawnMargin;
 
     state.enemies = state.enemies.filter(function (enemy) {
       enemy.wave += state.dt;
       enemy.angle += Math.sin(enemy.wave * 1.2) * state.dt * 0.4;
+      steerEnemy(state, enemy, player, playerPower);
       enemy.vx += Math.cos(enemy.wave) * state.dt * (enemy.rewardType ? 4 : 8);
       enemy.vy += Math.sin(enemy.wave * 0.7) * state.dt * (enemy.rewardType ? 3 : 5);
       enemy.vx *= enemy.rewardType ? 0.986 : 0.992;
@@ -136,6 +144,39 @@
 
     updateBoss(state);
     maybeSpawnBoss(state, player);
+  }
+
+  function steerEnemy(state, enemy, player, playerPower) {
+    var toPlayer = Utils.normalize(player.x - enemy.x, player.y - enemy.y);
+    var dx = player.x - enemy.x;
+    var dy = player.y - enemy.y;
+    var playerDist = Math.sqrt(dx * dx + dy * dy);
+    var stronger = enemy.power > playerPower;
+    var awareness = enemy.rewardType ? 520 : 360;
+    var chaseForce = enemy.rewardType ? 72 : 36;
+    var fleeForce = enemy.rewardType ? 84 : 42;
+
+    if (enemy.rewardType) {
+      var homeDx = enemy.homeX - enemy.x;
+      var homeDy = enemy.homeY - enemy.y;
+      var homeDist = Math.sqrt(homeDx * homeDx + homeDy * homeDy);
+      if (homeDist > enemy.territoryRadius * 1.28) {
+        var toHome = Utils.normalize(homeDx, homeDy);
+        enemy.vx += toHome.x * state.dt * 118;
+        enemy.vy += toHome.y * state.dt * 118;
+        return;
+      }
+    }
+
+    if (playerDist < awareness) {
+      var force = stronger ? chaseForce : -fleeForce;
+      enemy.vx += toPlayer.x * state.dt * force;
+      enemy.vy += toPlayer.y * state.dt * force;
+    } else if (enemy.rewardType) {
+      var returnDir = Utils.normalize(enemy.homeX - enemy.x, enemy.homeY - enemy.y);
+      enemy.vx += returnDir.x * state.dt * 34;
+      enemy.vy += returnDir.y * state.dt * 34;
+    }
   }
 
   function updateBoss(state) {
