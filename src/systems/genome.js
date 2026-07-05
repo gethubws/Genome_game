@@ -38,7 +38,8 @@
 
   function rollDropLetter(enemy, depth) {
     if (enemy.fixedDrop) return enemy.bias;
-    var biasChance = Utils.clamp(0.28 + depth / 1050, 0.28, 0.74);
+    var fallbackChance = Utils.clamp(0.28 + depth / 1050, 0.28, 0.74);
+    var biasChance = typeof enemy.dropChance === 'number' ? enemy.dropChance : fallbackChance;
     return Math.random() < biasChance ? enemy.bias : Utils.otherLetter(enemy.bias);
   }
 

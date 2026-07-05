@@ -39,6 +39,7 @@
       rewardType: rewardType,
       rewardSiteId: options.rewardSiteId || null,
       layerIndex: layerIndex,
+      dropChance: info.dropChance,
       regionId: info.region ? info.region.id : null,
       highRisk: !!(info.region && info.region.highRisk)
     };
