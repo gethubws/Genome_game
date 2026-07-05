@@ -42,6 +42,7 @@
     var ctx = state.ctx;
     ctx.clearRect(0, 0, state.screen.width, state.screen.height);
     drawBackground(state, ctx);
+    drawMapOverlay(state, ctx);
     drawParticles(state, ctx, true);
     state.enemies.forEach(function (enemy) { drawEnemy(state, ctx, enemy); });
     if (state.boss.active) drawBoss(state, ctx, state.boss.active);
@@ -151,6 +152,95 @@
       ctx.fillRect(state.screen.width - 72, y, 42, 1);
       ctx.fillText(label, state.screen.width - 122, y + 4);
     }
+    ctx.restore();
+  }
+
+  function drawMapOverlay(state, ctx) {
+    if (!state.map || !state.map.layers.length) return;
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+    MapSystem.visibleRegions(state, 180).forEach(function (region) {
+      drawRegionField(state, ctx, region);
+    });
+    ctx.restore();
+
+    ctx.save();
+    MapSystem.visibleWalls(state, 120).forEach(function (wall) {
+      drawWallBlock(state, ctx, wall);
+    });
+    MapSystem.visibleGates(state, 180).forEach(function (gate) {
+      drawGateMarker(state, ctx, gate);
+    });
+    ctx.restore();
+  }
+
+  function drawRegionField(state, ctx, region) {
+    var s = Utils.worldToScreen(state, region);
+    var danger = region.highRisk;
+    ctx.save();
+    ctx.globalAlpha = danger ? 0.16 : 0.09;
+    ctx.fillStyle = danger ? '#ff3e8d' : '#35d8ff';
+    ctx.beginPath();
+    ctx.ellipse(s.x, s.y, region.rx, region.ry, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.globalAlpha = danger ? 0.38 : 0.22;
+    ctx.strokeStyle = danger ? '#ffc84a' : '#4debd4';
+    ctx.lineWidth = danger ? 2 : 1;
+    ctx.setLineDash(danger ? [12, 10] : [4, 10]);
+    ctx.beginPath();
+    ctx.ellipse(s.x, s.y, region.rx, region.ry, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  function drawWallBlock(state, ctx, wall) {
+    var s = Utils.worldToScreen(state, { x: wall.x, y: wall.y });
+    ctx.save();
+    ctx.globalAlpha = 0.76;
+    ctx.fillStyle = 'rgba(12, 20, 52, 0.82)';
+    ctx.strokeStyle = 'rgba(101, 229, 255, 0.38)';
+    ctx.lineWidth = 1.4;
+    roundRect(ctx, s.x, s.y, wall.w, wall.h, 8);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.globalAlpha = 0.32;
+    ctx.strokeStyle = '#ffffff';
+    ctx.setLineDash([10, 16]);
+    ctx.beginPath();
+    ctx.moveTo(s.x + 12, s.y + wall.h * 0.5);
+    ctx.lineTo(s.x + wall.w - 12, s.y + wall.h * 0.5);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  function drawGateMarker(state, ctx, gate) {
+    var s = Utils.worldToScreen(state, gate);
+    var color = gate.final ? '#ff3e8d' : gate.defeated ? '#4debd4' : '#ffc84a';
+    ctx.save();
+    ctx.globalAlpha = gate.defeated ? 0.42 : 0.82;
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = gate.final ? 3 : 2;
+    ctx.setLineDash(gate.bypassed ? [6, 8] : []);
+    ctx.beginPath();
+    ctx.moveTo(s.x - gate.width * 0.5, s.y - 36);
+    ctx.lineTo(s.x - gate.width * 0.5, s.y + 36);
+    ctx.moveTo(s.x + gate.width * 0.5, s.y - 36);
+    ctx.lineTo(s.x + gate.width * 0.5, s.y + 36);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    fillPolygon(ctx, s.x, s.y, gate.final ? 16 : 12, gate.final ? 5 : 4, state.time * 0.9);
+
+    var bypass = Utils.worldToScreen(state, { x: gate.bypassX, y: gate.y });
+    ctx.globalAlpha = 0.5;
+    ctx.strokeStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(bypass.x, bypass.y, Math.max(12, gate.bypassWidth * 0.42), 0, Math.PI * 2);
+    ctx.stroke();
     ctx.restore();
   }
 
