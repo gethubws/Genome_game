@@ -137,8 +137,11 @@
 
   function refreshGalleryCount() {
     if (!els.galleryCount) return;
-    var records = readGalleryRecords();
-    els.galleryCount.textContent = records.length + (records.length === 1 ? ' Record' : ' Records');
+    ImageSystem.loadGalleryRecords().then(function (records) {
+      els.galleryCount.textContent = records.length + (records.length === 1 ? ' Record' : ' Records');
+    }).catch(function () {
+      els.galleryCount.textContent = '0 Records';
+    });
   }
 
   function saveImageKey() {
@@ -163,48 +166,44 @@
 
   function renderGallery() {
     if (!els.galleryGrid) return;
-    var records = readGalleryRecords();
-    els.galleryGrid.innerHTML = '';
-    if (!records.length) {
-      var empty = document.createElement('div');
-      empty.className = 'gallery-empty';
-      empty.innerHTML = '<strong>No cleared runs yet</strong><span>Final images will appear here after the fourth boss falls.</span>';
-      els.galleryGrid.appendChild(empty);
-      return;
-    }
-
-    records.forEach(function (record) {
-      var card = document.createElement('article');
-      card.className = 'gallery-item';
-      var image = record.thumbnail || record.image;
-      if (image) {
-        var img = document.createElement('img');
-        img.src = image;
-        img.alt = record.title || 'Generated genome avatar';
-        card.appendChild(img);
-      } else {
-        var placeholder = document.createElement('div');
-        placeholder.className = 'gallery-placeholder';
-        placeholder.textContent = 'GENE';
-        card.appendChild(placeholder);
+    els.galleryGrid.innerHTML = '<div class="gallery-empty"><strong>Loading gallery</strong><span>Reading local run records.</span></div>';
+    ImageSystem.loadGalleryRecords().then(function (records) {
+      els.galleryGrid.innerHTML = '';
+      if (!records.length) {
+        var empty = document.createElement('div');
+        empty.className = 'gallery-empty';
+        empty.innerHTML = '<strong>No cleared runs yet</strong><span>Final images will appear here after the fourth boss falls.</span>';
+        els.galleryGrid.appendChild(empty);
+        return;
       }
-      var title = document.createElement('strong');
-      title.textContent = record.title || 'Cleared Genome';
-      var meta = document.createElement('span');
-      meta.textContent = record.createdAt ? new Date(record.createdAt).toLocaleDateString() : 'saved run';
-      card.appendChild(title);
-      card.appendChild(meta);
-      els.galleryGrid.appendChild(card);
-    });
-  }
 
-  function readGalleryRecords() {
-    try {
-      var records = JSON.parse(Utils.storageGet('gene-current-gallery', '[]'));
-      return Array.isArray(records) ? records : [];
-    } catch (error) {
-      return [];
-    }
+      records.forEach(function (record) {
+        var card = document.createElement('article');
+        card.className = 'gallery-item';
+        var image = record.thumbnail || record.image;
+        if (image) {
+          var img = document.createElement('img');
+          img.src = image;
+          img.alt = record.title || 'Generated genome avatar';
+          card.appendChild(img);
+        } else {
+          var placeholder = document.createElement('div');
+          placeholder.className = 'gallery-placeholder';
+          placeholder.textContent = 'GENE';
+          card.appendChild(placeholder);
+        }
+        var title = document.createElement('strong');
+        title.textContent = record.title || 'Cleared Genome';
+        var meta = document.createElement('span');
+        var wordCount = record.words && record.words.length ? record.words.length + ' words' : 'saved run';
+        meta.textContent = (record.createdAt ? new Date(record.createdAt).toLocaleDateString() : 'saved run') + ' / ' + wordCount;
+        card.appendChild(title);
+        card.appendChild(meta);
+        els.galleryGrid.appendChild(card);
+      });
+    }).catch(function () {
+      els.galleryGrid.innerHTML = '<div class="gallery-empty"><strong>Gallery unavailable</strong><span>Local storage could not be read.</span></div>';
+    });
   }
 
   function renderGenome(state) {
@@ -311,7 +310,7 @@
       img.alt = 'Generated cleared genome avatar';
       els.clearImagePreview.appendChild(img);
       els.clearImageStatus.textContent = 'Final image ready';
-      els.clearImageDetail.textContent = 'Generated from the cleared genome.';
+      els.clearImageDetail.textContent = state.clearImage.record && state.clearImage.record.saved ? 'Saved to Gallery.' : 'Generated from the cleared genome.';
       return;
     }
 

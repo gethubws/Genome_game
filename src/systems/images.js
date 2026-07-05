@@ -58,7 +58,13 @@
       state.clearImage.image = image;
       state.clearImage.record = snapshot;
       notifyImageUI(state);
-      return snapshot;
+      return saveGalleryRecord(snapshot).then(function (saved) {
+        snapshot.saved = !!saved;
+        state.clearImage.record = snapshot;
+        notifyImageUI(state);
+        if (window.GameUI && GameUI.refreshGalleryCount) GameUI.refreshGalleryCount();
+        return snapshot;
+      });
     }).catch(function (error) {
       setStatus(state, 'error', error && error.message ? error.message : 'image request failed');
       return null;
@@ -137,6 +143,72 @@
     notifyImageUI(state);
   }
 
+  function saveGalleryRecord(record) {
+    return openGalleryDb().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        var tx = db.transaction('records', 'readwrite');
+        tx.objectStore('records').put(record);
+        tx.oncomplete = function () { resolve(true); };
+        tx.onerror = function () { reject(tx.error || new Error('gallery save failed')); };
+      });
+    }).catch(function () {
+      return saveGalleryRecordFallback(record);
+    });
+  }
+
+  function loadGalleryRecords() {
+    return openGalleryDb().then(function (db) {
+      return new Promise(function (resolve, reject) {
+        var tx = db.transaction('records', 'readonly');
+        var request = tx.objectStore('records').getAll();
+        request.onsuccess = function () { resolve(sortRecords(request.result || [])); };
+        request.onerror = function () { reject(request.error || new Error('gallery load failed')); };
+      });
+    }).catch(function () {
+      return Promise.resolve(sortRecords(readGalleryFallback()));
+    });
+  }
+
+  function openGalleryDb() {
+    return new Promise(function (resolve, reject) {
+      if (!window.indexedDB) {
+        reject(new Error('indexedDB unavailable'));
+        return;
+      }
+      var request = indexedDB.open('gene-current-gallery', 1);
+      request.onupgradeneeded = function () {
+        var db = request.result;
+        if (!db.objectStoreNames.contains('records')) {
+          db.createObjectStore('records', { keyPath: 'id' });
+        }
+      };
+      request.onsuccess = function () { resolve(request.result); };
+      request.onerror = function () { reject(request.error || new Error('gallery open failed')); };
+    });
+  }
+
+  function saveGalleryRecordFallback(record) {
+    var records = readGalleryFallback().filter(function (item) { return item.id !== record.id; });
+    records.unshift(record);
+    records = records.slice(0, 24);
+    return Promise.resolve(Utils.storageSet('gene-current-gallery', JSON.stringify(records)));
+  }
+
+  function readGalleryFallback() {
+    try {
+      var records = JSON.parse(Utils.storageGet('gene-current-gallery', '[]'));
+      return Array.isArray(records) ? records : [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  function sortRecords(records) {
+    return records.slice().sort(function (a, b) {
+      return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+    });
+  }
+
   function notifyImageUI(state) {
     if (window.GameUI && GameUI.renderClearImage) GameUI.renderClearImage(state);
   }
@@ -151,6 +223,8 @@
     generateClearImage: generateClearImage,
     buildClearPrompt: buildClearPrompt,
     createClearRecord: createClearRecord,
-    parseImageResponse: parseImageResponse
+    parseImageResponse: parseImageResponse,
+    saveGalleryRecord: saveGalleryRecord,
+    loadGalleryRecords: loadGalleryRecords
   };
 })();
