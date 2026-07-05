@@ -29,6 +29,13 @@
           <span><b>Archive</b><strong id="galleryCount">0 Records</strong></span>
           <span><b>Status</b><strong>Ready</strong></span>
         </div>
+        <div class="image-key-panel" aria-label="Image API settings">
+          <label for="imageKeyInput">Image API</label>
+          <input id="imageKeyInput" type="password" autocomplete="off" placeholder="Paste key locally">
+          <button id="saveImageKeyButton" type="button">Save</button>
+          <button id="clearImageKeyButton" type="button">Clear</button>
+          <span id="imageKeyStatus">not saved</span>
+        </div>
       </div>
     </section>
 
@@ -160,6 +167,7 @@
   <script src="src/systems/enemies.js"></script>
   <script src="src/systems/genome.js"></script>
   <script src="src/systems/combat.js"></script>
+  <script src="src/systems/images.js"></script>
   <script src="src/skills/scan.js"></script>
   <script src="src/skills/dash.js"></script>
   <script src="src/skills/shot.js"></script>

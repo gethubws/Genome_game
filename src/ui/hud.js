@@ -27,6 +27,10 @@
     els.enterGameButton = document.getElementById('enterGameButton');
     els.openGalleryButton = document.getElementById('openGalleryButton');
     els.galleryCount = document.getElementById('galleryCount');
+    els.imageKeyInput = document.getElementById('imageKeyInput');
+    els.saveImageKeyButton = document.getElementById('saveImageKeyButton');
+    els.clearImageKeyButton = document.getElementById('clearImageKeyButton');
+    els.imageKeyStatus = document.getElementById('imageKeyStatus');
     els.galleryModal = document.getElementById('galleryModal');
     els.closeGalleryButton = document.getElementById('closeGalleryButton');
     els.galleryGrid = document.getElementById('galleryGrid');
@@ -55,8 +59,15 @@
     if (els.menuButton) {
       els.menuButton.addEventListener('click', function () { showStartMenu(state); });
     }
+    if (els.saveImageKeyButton) {
+      els.saveImageKeyButton.addEventListener('click', saveImageKey);
+    }
+    if (els.clearImageKeyButton) {
+      els.clearImageKeyButton.addEventListener('click', clearImageKey);
+    }
 
     refreshGalleryCount();
+    refreshImageKeyStatus();
 
     renderGenome(state);
     update(state, true);
@@ -103,6 +114,7 @@
     els.startScreen.classList.add('show');
     if (els.enterGameButton) els.enterGameButton.textContent = state.started ? 'Resume' : 'Enter Game';
     refreshGalleryCount();
+    refreshImageKeyStatus();
   }
 
   function openGallery(state) {
@@ -123,6 +135,26 @@
     if (!els.galleryCount) return;
     var records = readGalleryRecords();
     els.galleryCount.textContent = records.length + (records.length === 1 ? ' Record' : ' Records');
+  }
+
+  function saveImageKey() {
+    if (!els.imageKeyInput) return;
+    var ok = ImageSystem.setApiKey(els.imageKeyInput.value);
+    els.imageKeyInput.value = '';
+    refreshImageKeyStatus(ok ? 'saved locally' : 'save failed');
+  }
+
+  function clearImageKey() {
+    ImageSystem.clearApiKey();
+    if (els.imageKeyInput) els.imageKeyInput.value = '';
+    refreshImageKeyStatus('not saved');
+  }
+
+  function refreshImageKeyStatus(message) {
+    if (!els.imageKeyStatus || !window.ImageSystem) return;
+    var saved = ImageSystem.hasApiKey();
+    els.imageKeyStatus.textContent = message || (saved ? ImageSystem.maskedKey() : 'not saved');
+    if (els.imageKeyInput) els.imageKeyInput.placeholder = saved ? 'Key saved locally' : 'Paste key locally';
   }
 
   function renderGallery() {
