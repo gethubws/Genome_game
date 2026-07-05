@@ -285,21 +285,43 @@
 
   function drawBoss(state, ctx, boss) {
     var s = Utils.worldToScreen(state, boss);
-    var style = { color: '#ff3e8d', glow: 'rgba(255,62,141,0.62)', shape: 'burst', danger: true, boss: true };
+    var style = bossStyle(boss);
     ctx.save();
     ctx.globalAlpha = 0.8;
     ctx.strokeStyle = style.glow;
     ctx.lineWidth = 3;
-    for (var i = 0; i < 3; i += 1) {
+    for (var i = 0; i < style.rings; i += 1) {
       ctx.beginPath();
-      ctx.arc(s.x, s.y, boss.radius + 8 + i * 12 + Math.sin(state.time * 5 + i) * 4, 0, Math.PI * 2);
+      ctx.arc(s.x, s.y, boss.radius + 8 + i * 11 + Math.sin(state.time * 5 + i) * 4, 0, Math.PI * 2);
       ctx.stroke();
     }
     ctx.restore();
     drawTargetLine(state, ctx, s, style);
-    drawGeometricTarget(ctx, s.x, s.y, boss.radius, boss.angle + state.time * 0.25, style, boss.hurt);
+    drawLayeredBoss(ctx, s.x, s.y, boss.radius, boss.angle + state.time * 0.25, style, boss.hurt, state.time);
     drawTargetStatus(ctx, s.x, s.y, boss.radius, style, boss);
     drawEnemyInfo(ctx, s, boss, style);
+  }
+
+  function bossStyle(boss) {
+    var layer = boss.layerIndex || 1;
+    var styles = [
+      { color: '#ff315e', secondary: '#ffc84a', glow: 'rgba(255,49,94,0.68)', outerSides: 3, innerSides: 6, rings: 3 },
+      { color: '#35d8ff', secondary: '#9a62ff', glow: 'rgba(53,216,255,0.66)', outerSides: 4, innerSides: 8, rings: 4 },
+      { color: '#9a62ff', secondary: '#4debd4', glow: 'rgba(154,98,255,0.7)', outerSides: 5, innerSides: 10, rings: 4 },
+      { color: '#ff3e8d', secondary: '#ffd36f', glow: 'rgba(255,62,141,0.78)', outerSides: 7, innerSides: 12, rings: 5 }
+    ];
+    var style = styles[Utils.clamp(layer - 1, 0, styles.length - 1)];
+    return {
+      color: style.color,
+      secondary: style.secondary,
+      glow: style.glow,
+      outerSides: style.outerSides,
+      innerSides: style.innerSides,
+      rings: style.rings,
+      shape: 'burst',
+      danger: true,
+      boss: true
+    };
   }
 
   function enemyStyle(state, enemy) {
@@ -371,6 +393,39 @@
     ctx.strokeStyle = style.color;
     ctx.lineWidth = 7;
     ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawLayeredBoss(ctx, x, y, radius, angle, style, hurt, time) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.globalAlpha = hurt > 0 ? 0.76 : 1;
+    ctx.shadowColor = style.glow;
+    ctx.shadowBlur = 30;
+
+    var outer = radius * 0.78;
+    ctx.fillStyle = style.color;
+    ctx.strokeStyle = 'rgba(255,255,255,0.82)';
+    ctx.lineWidth = 2.6;
+    drawPolygonPath(ctx, outer, style.outerSides, -Math.PI / 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.rotate(-time * 0.9);
+    ctx.globalAlpha *= 0.78;
+    ctx.fillStyle = style.secondary;
+    ctx.strokeStyle = 'rgba(17,26,61,0.72)';
+    ctx.lineWidth = 2;
+    drawPolygonPath(ctx, outer * 0.62, style.innerSides, Math.PI / style.innerSides);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.rotate(time * 1.7);
+    ctx.globalAlpha = hurt > 0 ? 0.95 : 0.82;
+    ctx.fillStyle = '#f8fbff';
+    drawStarPath(ctx, outer * 0.36, outer * 0.16, Math.max(6, Math.floor(style.innerSides / 2)));
+    ctx.fill();
     ctx.restore();
   }
 
