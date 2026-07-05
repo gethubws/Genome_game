@@ -151,6 +151,7 @@ button { font: inherit; }
 .metric-genome::after { background: linear-gradient(90deg, var(--cyan), var(--teal)); }
 
 .word-panel,
+.recommendation-panel,
 .genome-panel,
 .ability-panel,
 .boss-panel,
@@ -187,11 +188,52 @@ button { font: inherit; }
   overflow: hidden;
 }
 
+.recommendation-panel {
+  top: min(440px, 52vh);
+  right: 18px;
+  width: min(230px, calc(100vw - 36px));
+  padding: 14px;
+  border-radius: 8px;
+}
+
 .word-list {
   display: grid;
   gap: 7px;
   max-height: calc(42vh - 92px);
   overflow: hidden;
+}
+
+.recommendation-list {
+  display: grid;
+  gap: 8px;
+}
+
+.recommendation-list div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 7px 8px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.075);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.recommendation-list span {
+  color: rgba(237, 244, 255, 0.58);
+  font-size: 9px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.recommendation-list strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #f8fbff;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .word-chip {
@@ -496,6 +538,7 @@ button { font: inherit; }
   }
   .metric strong, .stage-badge strong { font-size: 16px; }
   .word-panel { top: 70px; right: 12px; width: 210px; }
+  .recommendation-panel { top: 262px; right: 12px; width: 210px; }
   .genome-panel { right: 12px; bottom: 132px; left: 12px; min-height: 96px; }
   .ability-panel { right: 12px; left: 12px; bottom: 12px; width: auto; }
   .boss-panel { display: none; }
@@ -513,6 +556,8 @@ button { font: inherit; }
   .stage-badge { display: none; }
   .metric { min-height: 38px; padding: 5px 7px; }
   .word-panel { left: 12px; width: auto; max-height: 118px; }
+  .recommendation-panel { top: 196px; left: 12px; right: 12px; width: auto; }
+  .recommendation-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .word-list { display: flex; flex-wrap: wrap; max-height: 40px; }
   .queue-row { grid-template-columns: 58px 1fr; }
   .queue-label { font-size: 8px; }

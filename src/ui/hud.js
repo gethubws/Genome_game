@@ -10,6 +10,10 @@
     els.letterHint = document.getElementById('letterHint');
     els.wordList = document.getElementById('wordList');
     els.wordSummary = document.getElementById('wordSummary');
+    els.recommendationSummary = document.getElementById('recommendationSummary');
+    els.targetWord = document.getElementById('targetWord');
+    els.missingLetters = document.getElementById('missingLetters');
+    els.bestRegion = document.getElementById('bestRegion');
     els.scanButton = document.getElementById('scanButton');
     els.dashButton = document.getElementById('dashButton');
     els.shotButton = document.getElementById('shotButton');
@@ -54,6 +58,7 @@
 
     renderGenome(state);
     renderWords(state);
+    renderRecommendation(state);
     updateAbility(els.scanButton, ScanSkill.charge(state), state.skills.scan.cooldown <= 0);
     updateAbility(els.dashButton, DashSkill.charge(state), state.skills.dash.cooldown <= 0);
     updateAbility(els.shotButton, ShotSkill.charge(state), state.skills.shot.cooldown <= 0);
@@ -95,6 +100,16 @@
       chip.innerHTML = '<span>' + word.text + '</span><span class="mult">x' + word.mult.toFixed(2) + '</span>';
       els.wordList.appendChild(chip);
     });
+  }
+
+  function renderRecommendation(state) {
+    var recommendation = state.recommendation || {};
+    var target = recommendation.target;
+    var missing = recommendation.missing || [];
+    els.recommendationSummary.textContent = target ? 'x' + target.mult.toFixed(2) : 'route hint';
+    els.targetWord.textContent = target ? target.text.toUpperCase() : 'none';
+    els.missingLetters.textContent = missing.length ? missing.map(function (letter) { return letter.toUpperCase(); }).join(' ') : 'ready';
+    els.bestRegion.textContent = MapSystem.describeRegion(recommendation.bestRegion);
   }
 
   function updateAbility(button, charge, ready) {
