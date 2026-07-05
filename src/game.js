@@ -27,7 +27,7 @@
     lastTime = now;
     state.dt = elapsed;
 
-    if (!state.paused && !state.runOver) {
+    if (state.started && !state.paused && !state.runOver) {
       state.time += elapsed;
       InputSystem.updatePlayerMovement(state);
       DashSkill.update(state);

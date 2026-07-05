@@ -14,7 +14,8 @@
       screen: { width: canvas.clientWidth || config.width, height: canvas.clientHeight || config.height, dpr: 1 },
       time: 0,
       dt: 0,
-      paused: false,
+      started: false,
+      paused: true,
       runOver: false,
       camera: { x: 0, y: 0 },
       input: {

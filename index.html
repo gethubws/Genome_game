@@ -15,6 +15,23 @@
     </button>
     <button class="hud corner-button settings-button" type="button" aria-label="Settings">*</button>
 
+    <section class="start-screen show" id="startScreen" aria-label="Start menu">
+      <div class="start-card">
+        <small>Gene Current</small>
+        <h1>Gene Current</h1>
+        <p>Four gates. One genome. No quiet descent.</p>
+        <div class="start-actions" aria-label="Main actions">
+          <button class="start-action primary" id="enterGameButton" type="button">Enter Game</button>
+          <button class="start-action secondary" id="openGalleryButton" type="button">Gallery</button>
+        </div>
+        <div class="start-readout" aria-label="Run frame">
+          <span><b>Mode</b><strong>Four Gates</strong></span>
+          <span><b>Archive</b><strong id="galleryCount">0 Records</strong></span>
+          <span><b>Status</b><strong>Ready</strong></span>
+        </div>
+      </div>
+    </section>
+
     <section class="hud hud-top" aria-label="Run status">
       <div class="stage-badge">
         <span>Stage</span>
@@ -116,6 +133,19 @@
         <p id="evolutionBody">New letters entered the current.</p>
         <div class="reward-row" id="rewardRow"></div>
         <button id="continueButton" type="button">Dive On</button>
+      </div>
+    </section>
+
+    <section class="gallery-modal" id="galleryModal" aria-label="Run gallery" aria-hidden="true">
+      <div class="gallery-card">
+        <header class="gallery-header">
+          <div>
+            <small>Run Archive</small>
+            <h2>Gallery</h2>
+          </div>
+          <button class="gallery-close" id="closeGalleryButton" type="button" aria-label="Close gallery">x</button>
+        </header>
+        <div class="gallery-grid" id="galleryGrid"></div>
       </div>
     </section>
   </main>
