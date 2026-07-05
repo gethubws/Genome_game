@@ -82,6 +82,13 @@
         missing: [],
         bestRegion: null
       },
+      clearImage: {
+        status: 'idle',
+        error: '',
+        prompt: '',
+        image: '',
+        record: null
+      },
       boss: {
         depth: config.bossDepthStep,
         active: null,

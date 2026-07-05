@@ -134,10 +134,12 @@
           'expressed: ' + (state.words.found.length || 0) + ' words',
           'genome: ' + state.genome.letters.length + ' / ' + state.genome.capacity
         ],
-        continueLabel: 'Cleared'
+        continueLabel: 'Cleared',
+        clearImage: true
       };
       state.paused = true;
       GameUI.showEvolution(state);
+      ImageSystem.generateClearImage(state);
       return;
     }
     var rewardWord = WordSystem.randomRewardWord();

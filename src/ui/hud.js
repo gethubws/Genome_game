@@ -38,6 +38,10 @@
     els.evolutionTitle = document.getElementById('evolutionTitle');
     els.evolutionBody = document.getElementById('evolutionBody');
     els.rewardRow = document.getElementById('rewardRow');
+    els.clearImagePanel = document.getElementById('clearImagePanel');
+    els.clearImagePreview = document.getElementById('clearImagePreview');
+    els.clearImageStatus = document.getElementById('clearImageStatus');
+    els.clearImageDetail = document.getElementById('clearImageDetail');
     els.continueButton = document.getElementById('continueButton');
 
     els.continueButton.addEventListener('click', function () {
@@ -287,7 +291,47 @@
       pill.textContent = text;
       els.rewardRow.appendChild(pill);
     });
+    renderClearImage(state);
     els.evolutionModal.classList.add('show');
+  }
+
+  function renderClearImage(state) {
+    if (!els.clearImagePanel || !state.clearImage) return;
+    var shouldShow = state.reward && state.reward.clearImage;
+    els.clearImagePanel.classList.toggle('show', !!shouldShow);
+    if (!shouldShow) return;
+
+    var status = state.clearImage.status;
+    els.clearImagePanel.className = 'clear-image-panel show ' + status;
+    els.clearImagePreview.innerHTML = '';
+
+    if (status === 'ready' && state.clearImage.image) {
+      var img = document.createElement('img');
+      img.src = state.clearImage.image;
+      img.alt = 'Generated cleared genome avatar';
+      els.clearImagePreview.appendChild(img);
+      els.clearImageStatus.textContent = 'Final image ready';
+      els.clearImageDetail.textContent = 'Generated from the cleared genome.';
+      return;
+    }
+
+    var marker = document.createElement('span');
+    marker.textContent = status === 'loading' ? '...' : 'GENE';
+    els.clearImagePreview.appendChild(marker);
+
+    if (status === 'loading') {
+      els.clearImageStatus.textContent = 'Generating final image';
+      els.clearImageDetail.textContent = 'The cleared genome is being rendered.';
+    } else if (status === 'missing-key') {
+      els.clearImageStatus.textContent = 'Image key not saved';
+      els.clearImageDetail.textContent = 'Open the start menu to save a local key, then clear again.';
+    } else if (status === 'error') {
+      els.clearImageStatus.textContent = 'Image generation failed';
+      els.clearImageDetail.textContent = state.clearImage.error || 'The image request did not complete.';
+    } else {
+      els.clearImageStatus.textContent = 'Final image queued';
+      els.clearImageDetail.textContent = 'Preparing the cleared genome.';
+    }
   }
 
   window.GameUI = {
@@ -295,6 +339,7 @@
     update: update,
     toast: toast,
     showEvolution: showEvolution,
+    renderClearImage: renderClearImage,
     refreshGalleryCount: refreshGalleryCount
   };
 })();
