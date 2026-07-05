@@ -30,8 +30,9 @@
       dangerRegionsMin: 1,
       dangerRegionsMax: 2,
       wallBandThickness: 116,
-      gateGapWidth: 280,
-      bypassGapWidth: 42,
+      gateGapWidth: 620,
+      bossRoomWidth: 860,
+      bossRoomHeight: 620,
       rewardCounts: [2, 4, 8, 16],
       maxLockedBlocks: 2
     },

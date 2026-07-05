@@ -221,6 +221,12 @@
     var s = Utils.worldToScreen(state, gate);
     var color = gate.final ? '#ff3e8d' : gate.defeated ? '#4debd4' : '#ffc84a';
     ctx.save();
+    ctx.globalAlpha = gate.defeated ? 0.12 : 0.22;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.ellipse(s.x, s.y - 16, gate.roomWidth * 0.5, gate.roomHeight * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
     ctx.globalAlpha = gate.defeated ? 0.42 : 0.82;
     ctx.strokeStyle = color;
     ctx.fillStyle = color;
@@ -234,13 +240,6 @@
     ctx.stroke();
     ctx.setLineDash([]);
     fillPolygon(ctx, s.x, s.y, gate.final ? 16 : 12, gate.final ? 5 : 4, state.time * 0.9);
-
-    var bypass = Utils.worldToScreen(state, { x: gate.bypassX, y: gate.y });
-    ctx.globalAlpha = 0.5;
-    ctx.strokeStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(bypass.x, bypass.y, Math.max(12, gate.bypassWidth * 0.42), 0, Math.PI * 2);
-    ctx.stroke();
     ctx.restore();
   }
 

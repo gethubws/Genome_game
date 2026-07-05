@@ -93,17 +93,14 @@
     var halfWidth = state.map.width / 2;
     var y = finalGate ? layer.bottom - 560 : layer.bottom - 210;
     var gateX = rand(rng, -halfWidth * 0.25, halfWidth * 0.25);
-    var bypassSide = gateX < 0 ? 1 : -1;
-    var bypassX = gateX + bypassSide * rand(rng, halfWidth * 0.52, halfWidth * 0.72);
-    bypassX = Utils.clamp(bypassX, -halfWidth + 120, halfWidth - 120);
     var gate = {
       id: 'gate-' + layer.index,
       layerIndex: layer.index,
       x: gateX,
       y: y,
       width: config.gateGapWidth,
-      bypassX: bypassX,
-      bypassWidth: config.bypassGapWidth,
+      roomWidth: config.bossRoomWidth,
+      roomHeight: config.bossRoomHeight,
       defeated: false,
       bypassed: false,
       final: finalGate
@@ -118,8 +115,7 @@
     var halfWidth = state.map.width / 2;
     var y = gate.y - config.wallBandThickness / 2;
     var gaps = [
-      { start: gate.x - gate.width / 2, end: gate.x + gate.width / 2, kind: 'gate' },
-      { start: gate.bypassX - gate.bypassWidth / 2, end: gate.bypassX + gate.bypassWidth / 2, kind: 'bypass' }
+      { start: gate.x - gate.width / 2, end: gate.x + gate.width / 2, kind: 'gate' }
     ].sort(function (a, b) { return a.start - b.start; });
     var cursor = -halfWidth;
 
