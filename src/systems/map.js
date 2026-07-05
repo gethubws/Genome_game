@@ -271,10 +271,13 @@
   function markBypassedGates(state) {
     state.map.gates.forEach(function (gate) {
       if (gate.final || gate.defeated || gate.bypassed) return;
-      if (state.player.y > gate.y + 260) {
+      if (state.player.y > gate.y + gate.roomHeight * 0.46) {
         gate.bypassed = true;
-        if (state.boss.active && state.boss.active.gateId === gate.id) state.boss.active = null;
-        GameUI.toast(state, 'Gate bypassed', 'No boss reward from layer ' + gate.layerIndex);
+        if (state.boss.active && state.boss.active.gateId === gate.id) {
+          state.boss.active.power = state.boss.active.originalPower;
+          state.boss.active = null;
+        }
+        GameUI.toast(state, 'Boss bypassed', 'Layer ' + gate.layerIndex + ' boss remains behind you');
         state.recommendation.dirty = true;
         state.uiDirty = true;
       }
@@ -341,6 +344,20 @@
     for (var i = 0; i < state.map.gates.length; i += 1) {
       var gate = state.map.gates[i];
       if (!gate.defeated && (!gate.bypassed || gate.final)) return gate;
+    }
+    return null;
+  }
+
+  function bossGateNearPlayer(state) {
+    if (!state.map || !state.map.gates.length) return null;
+    var player = state.player;
+    for (var i = 0; i < state.map.gates.length; i += 1) {
+      var gate = state.map.gates[i];
+      if (gate.defeated) continue;
+      if (Math.abs(player.x - gate.x) > gate.roomWidth * 0.82) continue;
+      if (player.y < gate.y - gate.roomHeight * 0.72) continue;
+      if (player.y > gate.y + gate.roomHeight * 0.62) continue;
+      return gate;
     }
     return null;
   }
@@ -547,6 +564,7 @@
     layerAtY: layerAtY,
     pickBiasLetter: pickBiasLetter,
     nextBossGate: nextBossGate,
+    bossGateNearPlayer: bossGateNearPlayer,
     nextBossDepth: nextBossDepth,
     markBossDefeated: markBossDefeated,
     rewardSiteNearCamera: rewardSiteNearCamera,

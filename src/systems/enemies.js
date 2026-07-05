@@ -142,13 +142,21 @@
     var boss = state.boss.active;
     if (!boss) return;
     var player = state.player;
+    var dxHome = boss.x - boss.homeX;
+    var dyHome = boss.y - boss.homeY;
+    var playerOutsideRoom = Math.abs(player.x - boss.homeX) > boss.roomWidth * 0.62 || Math.abs(player.y - boss.homeY) > boss.roomHeight * 0.62;
+    if (Math.abs(player.x - boss.homeX) > boss.roomWidth * 1.15 || Math.abs(player.y - boss.homeY) > boss.roomHeight * 1.05) {
+      boss.power = boss.originalPower;
+      state.boss.active = null;
+      return;
+    }
     var toPlayer = Utils.normalize(player.x - boss.x, player.y - boss.y);
     var toHome = Utils.normalize(boss.homeX - boss.x, boss.homeY - boss.y);
-    var distHome = Math.sqrt(Math.pow(boss.x - boss.homeX, 2) + Math.pow(boss.y - boss.homeY, 2));
+    var distHome = Math.sqrt(dxHome * dxHome + dyHome * dyHome);
     boss.wave += state.dt;
     boss.angle = Math.atan2(toPlayer.y, toPlayer.x);
-    boss.vx += toPlayer.x * state.dt * 36 + toHome.x * state.dt * Utils.clamp(distHome, 0, 620) * 0.34;
-    boss.vy += toPlayer.y * state.dt * 28 + toHome.y * state.dt * Utils.clamp(distHome, 0, 620) * 0.34;
+    boss.vx += (playerOutsideRoom ? 0 : toPlayer.x * state.dt * 52) + toHome.x * state.dt * Utils.clamp(distHome, 0, 620) * 0.46;
+    boss.vy += (playerOutsideRoom ? 0 : toPlayer.y * state.dt * 40) + toHome.y * state.dt * Utils.clamp(distHome, 0, 620) * 0.46;
     boss.vx += Math.cos(boss.wave * 1.8) * state.dt * 46;
     boss.vy += Math.sin(boss.wave * 1.3) * state.dt * 30;
     boss.vx *= 0.984;
@@ -158,16 +166,18 @@
     boss.x = MapSystem.clampToWorldX(state, boss.x, boss.radius);
     boss.revealed = Math.max(0, boss.revealed - state.dt);
     boss.hurt = Math.max(0, boss.hurt - state.dt);
+    if (playerOutsideRoom) {
+      boss.power = Utils.lerp(boss.power, boss.originalPower, 0.08);
+      boss.hurt = 0;
+    }
     boss.revealScale = Utils.lerp(boss.revealScale, 1, 0.08);
     state.boss.notice = Math.max(0, state.boss.notice - state.dt);
   }
 
   function maybeSpawnBoss(state, player) {
     if (state.boss.active) return;
-    var gate = MapSystem.nextBossGate(state);
+    var gate = MapSystem.bossGateNearPlayer(state);
     if (!gate) return;
-    if (player.y < gate.y - 520) return;
-    if (gate.bypassed && !gate.final) return;
 
     var boss = createEnemy(state, gate.x, gate.y - 34, { fixedDrop: true, bias: Utils.pick(['b', 'o', 's', 's', Utils.randomLetter()]) });
     boss.id = 'boss-' + gate.id;
@@ -175,6 +185,8 @@
     boss.gateId = gate.id;
     boss.homeX = gate.x;
     boss.homeY = gate.y - 34;
+    boss.roomWidth = gate.roomWidth;
+    boss.roomHeight = gate.roomHeight;
     boss.radius = gate.final ? 84 : 62 + gate.layerIndex * 7;
     boss.power = (gate.final ? 32 : 14) + gate.layerIndex * 9 + Utils.depthAtY(gate.y) * 0.033;
     boss.originalPower = boss.power;
@@ -182,7 +194,7 @@
     boss.hue = gate.final ? 285 : 325;
     state.boss.active = boss;
     state.boss.notice = 3;
-    GameUI.toast(state, gate.final ? 'Final gate locked' : 'Boss gate detected', gate.final ? 'Defeat it to clear the run' : 'Defeat it for a genome reward, or find the sprint gap');
+    GameUI.toast(state, gate.final ? 'Final boss room' : 'Boss room entered', gate.bypassed ? 'The bypassed boss is back at full power' : 'Defeat it here or slip past with enough speed');
   }
 
   function removeEnemy(state, target) {
