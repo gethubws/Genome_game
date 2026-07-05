@@ -134,7 +134,7 @@
           'expressed: ' + (state.words.found.length || 0) + ' words',
           'genome: ' + state.genome.letters.length + ' / ' + state.genome.capacity
         ],
-        continueLabel: 'Cleared',
+        continueLabel: 'New Run',
         clearImage: true
       };
       state.paused = true;

@@ -45,7 +45,14 @@
     els.continueButton = document.getElementById('continueButton');
 
     els.continueButton.addEventListener('click', function () {
-      if (state.runOver) return;
+      if (state.runOver) {
+        if (state.clearImage && state.clearImage.status === 'loading') {
+          toast(state, 'Final image still rendering', 'Wait for the Gallery save before starting a new run');
+          return;
+        }
+        window.location.reload();
+        return;
+      }
       state.paused = false;
       state.reward = null;
       els.evolutionModal.classList.remove('show');
