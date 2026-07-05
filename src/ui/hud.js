@@ -25,6 +25,7 @@
     els.continueButton = document.getElementById('continueButton');
 
     els.continueButton.addEventListener('click', function () {
+      if (state.runOver) return;
       state.paused = false;
       state.reward = null;
       els.evolutionModal.classList.remove('show');
@@ -122,6 +123,7 @@
 
   function showEvolution(state) {
     if (!state.reward) return;
+    els.continueButton.textContent = state.reward.continueLabel || 'Dive On';
     els.evolutionTitle.textContent = state.reward.title;
     els.evolutionBody.textContent = state.reward.body;
     els.rewardRow.innerHTML = '';

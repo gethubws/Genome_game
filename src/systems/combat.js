@@ -83,20 +83,40 @@
   }
 
   function defeatBoss(state, boss) {
+    var gate = boss.gateId ? MapSystem.markBossDefeated(state, boss.gateId) : null;
+    if (gate && gate.final) {
+      WordSystem.express(state, 'clear');
+      state.boss.defeated += 1;
+      state.boss.depth = MapSystem.nextBossDepth(state);
+      state.runOver = true;
+      state.reward = {
+        title: 'Run Cleared',
+        body: 'The fourth gate collapsed. This genome survived the full descent.',
+        pills: [
+          'final power: ' + effectivePower(state).toFixed(1),
+          'expressed: ' + (state.words.found.length || 0) + ' words',
+          'genome: ' + state.genome.letters.length + ' / ' + state.genome.capacity
+        ],
+        continueLabel: 'Cleared'
+      };
+      state.paused = true;
+      GameUI.showEvolution(state);
+      return;
+    }
     var rewardWord = WordSystem.randomRewardWord();
     var oldCapacity = state.genome.capacity;
     GenomeSystem.expandCapacity(state, 4);
     GenomeSystem.addWord(state, rewardWord);
     WordSystem.express(state, 'boss');
     state.boss.defeated += 1;
-    state.boss.depth += GameConfig.bossDepthStep + state.boss.defeated * 90;
+    state.boss.depth = MapSystem.nextBossDepth(state);
     state.reward = {
       title: 'Genome Expanded',
       body: 'Boss current collapsed. A word entered the queue, capacity grew, and the avatar re-formed from unlocked words.',
       pills: [
         'word: ' + rewardWord.text,
         'slots: ' + oldCapacity + ' -> ' + state.genome.capacity,
-        'next boss: ' + state.boss.depth + 'm'
+        'next gate: ' + state.boss.depth + 'm'
       ]
     };
     state.paused = true;
