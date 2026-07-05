@@ -8,6 +8,7 @@
     RenderSystem.resize(state);
     MapSystem.generate(state);
     seedOpeningGenome(state);
+    RecommendationSystem.update(state);
     InputSystem.setup(state);
     GameUI.init(state);
     window.addEventListener('resize', function () { RenderSystem.resize(state); });
@@ -35,6 +36,7 @@
       MapSystem.update(state);
       EnemySystem.update(state);
       CombatSystem.update(state);
+      RecommendationSystem.update(state);
       RenderSystem.updateCamera(state);
       RenderSystem.updateEffects(state);
       maybeAddAmbientParticles(state);
