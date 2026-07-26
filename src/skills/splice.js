@@ -95,6 +95,11 @@
 
     var rank = level(state);
     var moveCount = Math.max(1, Math.floor(settings.moves || 1) + Math.min(3, Math.floor(rank / 2)));
+    if (window.WordSystem && WordSystem.preview) WordSystem.preview(state);
+    var beforeLog = Number(state.words && state.words.potentialLogMultiplier) || 0;
+    var beforeSignature = ((state.words && state.words.potentialOccurrences) || []).map(function (entry) {
+      return entry.word.text + '@' + entry.index;
+    }).join('|');
     var moved = [];
     for (var i = 0; i < moveCount; i += 1) {
       var index = firstUnlockedIndex(state.genome);
@@ -109,6 +114,9 @@
     }
 
     if (window.WordSystem && WordSystem.preview) WordSystem.preview(state);
+    if (window.SkillSystem && typeof SkillSystem.primeEchoFromSplice === 'function') {
+      SkillSystem.primeEchoFromSplice(state, beforeLog, beforeSignature);
+    }
     if (state.recommendation) state.recommendation.dirty = true;
     skill.active = true;
     skill.age = 0;

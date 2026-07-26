@@ -76,7 +76,10 @@
     var skill = skillState(state);
     var settings = config();
     if (state.paused || skill.cooldown > 0 || skill.active) return false;
-    var word = strongestWord(state);
+    var prime = window.SkillSystem && typeof SkillSystem.echoPrime === 'function'
+      ? SkillSystem.echoPrime(state)
+      : null;
+    var word = prime && prime.word ? prime.word : strongestWord(state);
     if (!word) {
       if (window.GameUI && GameUI.toast) GameUI.toast(state, t('echoFailed', 'Echo failed'), t('noExpressedWord', 'No expressed word is available'));
       return false;
@@ -84,15 +87,16 @@
 
     var rank = level(state);
     var source = Math.max(1, Number(word.mult) || 1);
-    var repeat = (settings.baseRepeat || FALLBACK_CONFIG.baseRepeat) + rank * 0.14;
+    var repeat = (settings.baseRepeat || FALLBACK_CONFIG.baseRepeat) + rank * 0.14 + (prime ? prime.repeatBonus : 0);
     skill.active = true;
     skill.age = 0;
-    skill.duration = (settings.duration || FALLBACK_CONFIG.duration) + rank * 0.5;
+    skill.duration = (settings.duration || FALLBACK_CONFIG.duration) + rank * 0.5 + (prime ? prime.durationBonus : 0);
     skill.sourceMultiplier = source;
     skill.multiplier = 1 + (source - 1) * repeat;
     skill.boost = skill.multiplier;
     skill.word = word.text;
     skill.cooldown = Math.max(6.2, (settings.cooldown || FALLBACK_CONFIG.cooldown) - rank * 0.55);
+    if (prime && window.SkillSystem && typeof SkillSystem.consumeEchoPrime === 'function') SkillSystem.consumeEchoPrime(state);
     burst(state);
     state.floatingTexts.push({
       x: state.player.x,

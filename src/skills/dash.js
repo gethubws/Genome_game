@@ -71,9 +71,15 @@
     return Utils.clamp(1 - state.skills.dash.cooldown / base, 0, 1);
   }
 
+  function getPowerMultiplier(state) {
+    var skill = state.skills && state.skills.dash;
+    return skill && skill.active ? Math.max(1, Number(skill.boost) || 1) : 1;
+  }
+
   window.DashSkill = {
     tryStart: tryStart,
     update: update,
-    charge: charge
+    charge: charge,
+    getPowerMultiplier: getPowerMultiplier
   };
 })();

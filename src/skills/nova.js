@@ -13,8 +13,13 @@
     if (state.boss.active) entities.push(state.boss.active);
     entities.forEach(function (enemy) {
       if (Utils.dist(enemy, state.player) > skill.radius) return;
-      enemy.power = Math.max(0.1, enemy.power * (1 - GameConfig.skills.nova.weaken - level * 0.04));
-      enemy.hurt = 0.6;
+      var weaken = GameConfig.skills.nova.weaken + level * 0.04;
+      if (window.SkillSystem && typeof SkillSystem.weakenTarget === 'function') {
+        SkillSystem.weakenTarget(state, 'nova', enemy, weaken, 1.7);
+      } else {
+        enemy.power = Math.max(0.1, enemy.power * (1 - weaken));
+        enemy.hurt = 0.6;
+      }
     });
     ShotSkill.burst(state, state.player.x, state.player.y, GameConfig.palette.pink, 28);
     return true;

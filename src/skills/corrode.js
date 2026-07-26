@@ -106,10 +106,16 @@
   function applyToTarget(state, target, rank) {
     var settings = config();
     var weaken = Utils.clamp((settings.weaken || FALLBACK_CONFIG.weaken) + (rank || 0) * 0.045, 0.08, 0.72);
-    target.power = Math.max(0.1, target.power * (1 - weaken));
-    target.hurt = Math.max(target.hurt || 0, 0.72);
-    target.corrodeTimer = Math.max(target.corrodeTimer || 0, (settings.duration || FALLBACK_CONFIG.duration) + (rank || 0) * 0.35);
-    target.corrodeFactor = Math.min(0.9, (target.corrodeFactor || 0) + weaken);
+    var duration = (settings.duration || FALLBACK_CONFIG.duration) + (rank || 0) * 0.35;
+    if (window.SkillSystem && typeof SkillSystem.weakenTarget === 'function') {
+      var result = SkillSystem.weakenTarget(state, 'corrode', target, weaken, duration);
+      weaken = result.weaken;
+    } else {
+      target.power = Math.max(0.1, target.power * (1 - weaken));
+      target.hurt = Math.max(target.hurt || 0, 0.72);
+    }
+    target.corrodeTimer = Math.max(target.corrodeTimer || 0, duration);
+    target.corrodeFactor = Math.min(0.9, 1 - (1 - (target.corrodeFactor || 0)) * (1 - weaken));
     return weaken;
   }
 
@@ -152,12 +158,13 @@
   function update(state) {
     var skill = skillState(state);
     skill.cooldown = Math.max(0, skill.cooldown - state.dt);
-    (state.enemies || []).forEach(function (enemy) {
-      if (enemy.corrodeTimer) enemy.corrodeTimer = Math.max(0, enemy.corrodeTimer - state.dt);
+    var targets = (state.enemies || []).slice();
+    if (state.boss && state.boss.active) targets.push(state.boss.active);
+    targets.forEach(function (enemy) {
+      if (!enemy) return;
+      enemy.corrodeTimer = Math.max(0, (enemy.corrodeTimer || 0) - state.dt);
+      if (enemy.corrodeTimer <= 0) enemy.corrodeFactor = 0;
     });
-    if (state.boss && state.boss.active && state.boss.active.corrodeTimer) {
-      state.boss.active.corrodeTimer = Math.max(0, state.boss.active.corrodeTimer - state.dt);
-    }
     if (!skill.active) return;
     skill.age += state.dt;
     if (skill.age >= skill.duration) {

@@ -79,8 +79,17 @@
     return multiplier > 0 ? Math.log(multiplier) : 0;
   }
 
+  function skillLogMultiplier(state) {
+    if (window.SkillSystem && typeof SkillSystem.logPowerMultiplier === 'function') {
+      var combined = Number(SkillSystem.logPowerMultiplier(state));
+      if (combined === Infinity) return Infinity;
+      if (isFinite(combined)) return combined;
+    }
+    return dashLogMultiplier(state) + echoLogMultiplier(state);
+  }
+
   function effectiveLogPower(state) {
-    return settledLogPower(state) + dashLogMultiplier(state) + echoLogMultiplier(state);
+    return settledLogPower(state) + skillLogMultiplier(state);
   }
 
   function settledPower(state) {
@@ -202,6 +211,20 @@
       if (window.GrowthSkill && typeof GrowthSkill.modifyGrowthGain === 'function') {
         gain = GrowthSkill.modifyGrowthGain(state, gain, enemy);
       }
+      if (window.SkillSystem && typeof SkillSystem.modifyGrowthGain === 'function') {
+        var growthResult = SkillSystem.modifyGrowthGain(state, gain, enemy);
+        gain = growthResult && typeof growthResult.amount === 'number' ? growthResult.amount : gain;
+        if (growthResult && growthResult.triggered) {
+          state.floatingTexts.push({
+            x: enemy.x,
+            y: enemy.y - enemy.radius - 18,
+            text: SkillSystem.localizedSynergyName(SkillSystem.synergyById.feedingRush),
+            color: GameConfig.palette.gold,
+            life: 0.85,
+            maxLife: 0.85
+          });
+        }
+      }
       state.growthPower += gain;
     }
     ShotSkill.burst(state, enemy.x, enemy.y, enemy.dropType === 'growth' ? GameConfig.palette.gold : (enemy.fixedDrop ? GameConfig.palette.gold : state.player.accent), enemy.boss ? 32 : 20);
@@ -272,6 +295,7 @@
       state.skills.guard.active = false;
       player.invulnerable = 0.45;
       ShotSkill.burst(state, player.x, player.y, GameConfig.palette.gold, 18);
+      if (window.SkillSystem && typeof SkillSystem.onGuardAbsorbed === 'function') SkillSystem.onGuardAbsorbed(state);
       GameUI.toast(state, t('guardImpact', 'Guard absorbed the impact'), t('guardBody', 'No genome factors were lost'));
       if (window.AudioSystem) AudioSystem.play('guard');
       return;
@@ -293,6 +317,7 @@
       state.skills.guard.active = false;
       state.player.invulnerable = 0.45;
       ShotSkill.burst(state, state.player.x, state.player.y, GameConfig.palette.gold, 18);
+      if (window.SkillSystem && typeof SkillSystem.onGuardAbsorbed === 'function') SkillSystem.onGuardAbsorbed(state);
       GameUI.toast(state, t('guardAttack', 'Guard absorbed the attack'), t('growthProtected', 'Growth power was protected'));
       if (window.AudioSystem) AudioSystem.play('guard');
       return false;

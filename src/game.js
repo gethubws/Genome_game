@@ -33,16 +33,7 @@
       state.time += elapsed;
       state.player.radius = CombatSystem.visualRadius(state);
       InputSystem.updatePlayerMovement(state);
-      DashSkill.update(state);
-      ScanSkill.update(state);
-      ShotSkill.update(state);
-      NovaSkill.update(state);
-      GuardSkill.update(state);
-      FreezeSkill.update(state);
-      GrowthSkill.update(state);
-      SpliceSkill.update(state);
-      EchoSkill.update(state);
-      CorrodeSkill.update(state);
+      SkillSystem.updateAll(state);
       MapSystem.update(state);
       EnemySystem.update(state);
       CombatSystem.update(state);

@@ -52,6 +52,7 @@
     els.rewardRow = document.getElementById('rewardRow');
     els.skillBackpack = document.getElementById('skillBackpack');
     els.equippedSlots = document.getElementById('equippedSlots');
+    els.skillSynergies = document.getElementById('skillSynergies');
     els.skillInventory = document.getElementById('skillInventory');
     els.clearImagePanel = document.getElementById('clearImagePanel');
     els.clearImagePreview = document.getElementById('clearImagePreview');
@@ -173,6 +174,7 @@
       I18n.apply();
       state.uiDirty = true;
       update(state, true);
+      if (state.reward && els.evolutionModal.classList.contains('show')) showEvolution(state);
       refreshGalleryCount();
       refreshImageKeyStatus();
       if (els.galleryModal && els.galleryModal.classList.contains('show')) renderGallery();
@@ -613,12 +615,13 @@
       slot.className = 'backpack-slot' + (definition ? ' filled' : '');
       slot.innerHTML = '<span>' + (index + 1) + '</span><strong>' + (definition ? localizedSkillName(definition) : I18n.t('emptySlot', 'Empty slot')) + '</strong>';
       slot.addEventListener('click', function () {
-        state.player.activeSlots[index] = null;
+        SkillSystem.unequipAt(state, index);
         renderSkillBackpack(state);
-        state.uiDirty = true;
       });
       els.equippedSlots.appendChild(slot);
     });
+
+    renderSkillSynergies(state);
 
     els.skillInventory.innerHTML = '';
     SkillSystem.definitions.forEach(function (definition) {
@@ -632,19 +635,38 @@
       card.innerHTML = '<span class="inventory-icon">' + definition.icon + '</span><span class="inventory-copy"><strong>' + localizedSkillName(definition) + '</strong><small>' + (unlocked ? localizedSkillDescription(definition) : definition.words.join(' / ')) + '</small></span><span class="inventory-state">' + (equipped ? I18n.t('equipped', 'Equipped') : unlocked ? I18n.t('equip', 'Equip') : I18n.t('locked', 'Locked')) + '</span>';
       card.addEventListener('click', function () {
         if (equipped) {
-          state.player.activeSlots[state.player.activeSlots.indexOf(definition.id)] = null;
+          SkillSystem.unequipAt(state, state.player.activeSlots.indexOf(definition.id));
         } else {
           var empty = state.player.activeSlots.indexOf(null);
           if (empty === -1) {
             toast(state, I18n.t('allSlotsFull', 'All three slots are full'), I18n.t('removeSkillFirst', 'Remove one equipped skill first'));
             return;
           }
-          state.player.activeSlots[empty] = definition.id;
+          SkillSystem.equipAt(state, definition.id, empty);
         }
         renderSkillBackpack(state);
-        state.uiDirty = true;
       });
       els.skillInventory.appendChild(card);
+    });
+  }
+
+  function renderSkillSynergies(state) {
+    if (!els.skillSynergies) return;
+    els.skillSynergies.innerHTML = '';
+    var active = SkillSystem.activeSynergies ? SkillSystem.activeSynergies(state) : [];
+    els.skillSynergies.classList.toggle('empty', !active.length);
+    if (!active.length) return;
+    active.forEach(function (synergy) {
+      var chip = document.createElement('div');
+      chip.className = 'synergy-chip';
+      chip.title = SkillSystem.localizedSynergyDescription(synergy);
+      var link = document.createElement('span');
+      link.textContent = synergy.skills.map(function (id) { return SkillSystem.byId[id].icon; }).join(' + ');
+      var copy = document.createElement('strong');
+      copy.textContent = SkillSystem.localizedSynergyName(synergy);
+      chip.appendChild(link);
+      chip.appendChild(copy);
+      els.skillSynergies.appendChild(chip);
     });
   }
 

@@ -35,6 +35,7 @@
       life: GameConfig.skills.shot.life,
       maxLife: GameConfig.skills.shot.life,
       weaken: weaken,
+      weaknessDuration: 1.35,
       color: level > 1 ? GameConfig.palette.gold : GameConfig.palette.mint
     });
     return true;
@@ -62,8 +63,12 @@
       }
 
       if (hit) {
-        hit.power = Math.max(0.1, hit.power * (1 - bullet.weaken));
-        hit.hurt = 0.45;
+        if (window.SkillSystem && typeof SkillSystem.weakenTarget === 'function') {
+          SkillSystem.weakenTarget(state, 'shot', hit, bullet.weaken, bullet.weaknessDuration);
+        } else {
+          hit.power = Math.max(0.1, hit.power * (1 - bullet.weaken));
+          hit.hurt = 0.45;
+        }
         burst(state, bullet.x, bullet.y, bullet.color, 10);
         return false;
       }

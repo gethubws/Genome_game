@@ -77,7 +77,7 @@
         freeze: { cooldown: 0 },
         growth: { cooldown: 0, active: false, age: 0, duration: 0, charges: 0, multiplier: 1, totalBonus: 0 },
         splice: { cooldown: 0, active: false, age: 0, duration: 0, movedCount: 0, lastSequence: '' },
-        echo: { cooldown: 0, active: false, age: 0, duration: 0, multiplier: 1, boost: 1, word: '', sourceMultiplier: 1 },
+        echo: { cooldown: 0, active: false, age: 0, duration: 0, multiplier: 1, boost: 1, word: '', sourceMultiplier: 1, splicePrime: null },
         corrode: { cooldown: 0, active: false, age: 0, duration: 0, target: null, weaken: 0 }
       },
       skillInventory: {

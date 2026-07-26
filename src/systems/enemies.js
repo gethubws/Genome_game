@@ -45,6 +45,9 @@
       revealed: 0,
       revealScale: 0,
       hurt: 0,
+      weaknessTimer: 0,
+      corrodeTimer: 0,
+      corrodeFactor: 0,
       hue: hue,
       wave: Utils.rand(0, 10),
       special: !!options.fixedDrop || !!rewardType,
@@ -212,6 +215,7 @@
       enemy.x = MapSystem.clampToWorldX(state, enemy.x, enemy.radius);
       enemy.revealed = Math.max(0, enemy.revealed - state.dt);
       enemy.hurt = Math.max(0, enemy.hurt - state.dt);
+      enemy.weaknessTimer = Math.max(0, (enemy.weaknessTimer || 0) - state.dt);
       enemy.revealScale = Utils.lerp(enemy.revealScale, enemy.revealed > 0 ? 1 : 0, 0.14);
       enemy.attackCooldown -= state.dt;
       enemy.attackFlash = Math.max(0, enemy.attackFlash - state.dt);
@@ -453,7 +457,8 @@
     boss.x = MapSystem.clampToWorldX(state, boss.x, boss.radius);
     boss.revealed = Math.max(0, boss.revealed - state.dt);
     boss.hurt = Math.max(0, boss.hurt - state.dt);
-    if (playerOutsideRoom || boss.corrodeTimer <= 0) {
+    boss.weaknessTimer = Math.max(0, (boss.weaknessTimer || 0) - state.dt);
+    if (playerOutsideRoom || (boss.corrodeTimer <= 0 && boss.weaknessTimer <= 0)) {
       // Corrode temporarily lowers the recovery target instead of being
       // erased by the boss-room reset. Once its timer expires, full power
       // is restored gradually as before.
