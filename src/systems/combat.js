@@ -205,7 +205,6 @@
     var lockBeforeDrop = enemy.rewardType === 'lock';
     if (lockBeforeDrop) applyRewardEnemyEffect(state, enemy);
 
-    if (letter && !isBoss) GenomeSystem.addLetter(state, letter, 'enemy');
     if (enemy.dropType === 'growth') {
       gain = enemy.growthValue || GameConfig.growth.fishBase;
       if (window.GrowthSkill && typeof GrowthSkill.modifyGrowthGain === 'function') {
@@ -225,8 +224,21 @@
           });
         }
       }
-      state.growthPower += gain;
     }
+    // Consumption effects are selected from the build that made the catch.
+    // Emit before the reward mutates the genome, otherwise the incoming letter
+    // can retroactively enable an effect or push out one that was actually active.
+    if (window.SkillEffects && typeof SkillEffects.emit === 'function') {
+      SkillEffects.emit(state, SkillEffects.EVENTS.ENEMY_CONSUMED, {
+        enemy: enemy,
+        letter: letter,
+        gain: gain,
+        isBoss: isBoss,
+        dropType: enemy.dropType
+      });
+    }
+    if (letter && !isBoss) GenomeSystem.addLetter(state, letter, 'enemy');
+    if (enemy.dropType === 'growth') state.growthPower += gain;
     ShotSkill.burst(state, enemy.x, enemy.y, enemy.dropType === 'growth' ? GameConfig.palette.gold : (enemy.fixedDrop ? GameConfig.palette.gold : state.player.accent), enemy.boss ? 32 : 20);
     state.shockwaves.push({ x: enemy.x, y: enemy.y, age: 0, life: enemy.boss ? 0.85 : 0.5, radius: enemy.radius * (enemy.boss ? 3.2 : 2.4), color: enemy.dropType === 'growth' ? GameConfig.palette.gold : state.player.accent });
     if (!letter) {
@@ -295,7 +307,7 @@
       state.skills.guard.active = false;
       player.invulnerable = 0.45;
       ShotSkill.burst(state, player.x, player.y, GameConfig.palette.gold, 18);
-      if (window.SkillSystem && typeof SkillSystem.onGuardAbsorbed === 'function') SkillSystem.onGuardAbsorbed(state);
+      if (window.SkillSystem && typeof SkillSystem.onGuardAbsorbed === 'function') SkillSystem.onGuardAbsorbed(state, enemy, { kind: 'contact' });
       GameUI.toast(state, t('guardImpact', 'Guard absorbed the impact'), t('guardBody', 'No genome factors were lost'));
       if (window.AudioSystem) AudioSystem.play('guard');
       return;
@@ -304,23 +316,35 @@
     var incomingLog = typeof enemyLog === 'number' ? enemyLog : enemyLogPower(enemy);
     var currentPlayerLog = typeof playerLog === 'number' ? playerLog : effectiveLogPower(state);
     var gap = powerGap(enemyPower, incomingLog, currentPlayerLog);
-    damageGrowth(state, (enemy.attackDamage || GameConfig.growth.hitLoss) + gap * 0.06, enemy.attackLabel || 'Impact');
+    damageGrowth(state, (enemy.attackDamage || GameConfig.growth.hitLoss) + gap * 0.06, enemy.attackLabel || 'Impact', enemy);
     player.vx += dir.x * 280;
     player.vy += dir.y * 280;
     state.uiDirty = true;
   }
 
-  function damageGrowth(state, amount, label) {
+  function damageGrowth(state, amount, label, source) {
     if (state.player.invulnerable > 0) return false;
     state.damageTaken = true;
+    var factorLossReduction = 0;
     if (state.skills.guard.active) {
       state.skills.guard.active = false;
       state.player.invulnerable = 0.45;
       ShotSkill.burst(state, state.player.x, state.player.y, GameConfig.palette.gold, 18);
-      if (window.SkillSystem && typeof SkillSystem.onGuardAbsorbed === 'function') SkillSystem.onGuardAbsorbed(state);
+      if (window.SkillSystem && typeof SkillSystem.onGuardAbsorbed === 'function') SkillSystem.onGuardAbsorbed(state, source || null, { kind: 'damage', label: label });
       GameUI.toast(state, t('guardAttack', 'Guard absorbed the attack'), t('growthProtected', 'Growth power was protected'));
       if (window.AudioSystem) AudioSystem.play('guard');
       return false;
+    }
+    if (window.SkillEffects && typeof SkillEffects.emit === 'function') {
+      var damageEvent = SkillEffects.emit(state, SkillEffects.EVENTS.PLAYER_DAMAGE, {
+        amount: Math.max(0, Number(amount) || 0),
+        label: label,
+        source: source || null,
+        cancelled: false
+      });
+      if (damageEvent.cancelled) return false;
+      amount = Math.max(0, Number(damageEvent.amount) || 0);
+      factorLossReduction = Math.max(0, Math.floor(Number(damageEvent.factorLossReduction) || 0));
     }
     var displayLabel = damageLabel(label);
     var powerBeforeLog = settledLogPower(state);
@@ -328,9 +352,10 @@
     if (state.growthPower > 0) {
       state.growthPower = Math.max(0, state.growthPower - amount);
     } else if (state.genome.letters.length) {
-      var lossCount = Utils.clamp(Math.ceil(amount / 1.1), 1, Math.min(3, state.genome.letters.length));
-      removed = GenomeSystem.removeFrontFactors(state, lossCount);
-      if (!removed.length && state.genome.lockedBlocks.length) {
+      var baseLossCount = Utils.clamp(Math.ceil(amount / 1.1), 1, Math.min(3, state.genome.letters.length));
+      var lossCount = Math.max(0, baseLossCount - factorLossReduction);
+      if (lossCount > 0) removed = GenomeSystem.removeFrontFactors(state, lossCount);
+      if (lossCount > 0 && !removed.length && state.genome.lockedBlocks.length) {
         state.genome.lockedBlocks.shift();
         removed = GenomeSystem.removeFrontFactors(state, lossCount);
         GameUI.toast(state, t('lockShattered', 'Word lock shattered'), t('lockShatteredBody', 'Collapse pressure broke the oldest locked block'));
@@ -351,6 +376,14 @@
     });
     ShotSkill.burst(state, state.player.x, state.player.y, GameConfig.palette.danger, 12);
     GameUI.showPowerSurge(state, powerDelta(powerBeforeLog, settledLogPower(state)), false);
+    if (window.SkillEffects && typeof SkillEffects.emit === 'function') {
+      SkillEffects.emit(state, SkillEffects.EVENTS.PLAYER_DAMAGED, {
+        amount: amount,
+        label: label,
+        source: source || null,
+        removedLetters: removed.slice()
+      });
+    }
     state.uiDirty = true;
     return true;
   }

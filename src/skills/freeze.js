@@ -1,16 +1,35 @@
 (function () {
+  function applyField(state, radius, duration, options) {
+    var entities = state.enemies.slice();
+    if (state.boss.active) entities.push(state.boss.active);
+    entities.forEach(function (enemy) {
+      var distance = Utils.dist(enemy, state.player);
+      if (distance > radius) return;
+      enemy.frozen = Math.max(enemy.frozen || 0, duration);
+      if (window.SkillSystem && typeof SkillSystem.emitEffect === 'function') {
+        SkillSystem.emitEffect(state, window.SkillEffects ? SkillEffects.EVENTS.STATUS_APPLIED : 'status:applied', {
+          sourceId: 'freeze',
+          status: 'frozen',
+          target: enemy,
+          radius: radius,
+          duration: duration,
+          distance: distance,
+          replay: !!(options && options.replay)
+        });
+      }
+    });
+    return entities;
+  }
+
   function tryStart(state) {
     var skill = state.skills.freeze;
     if (state.paused || skill.cooldown > 0) return false;
     var level = SkillSystem.level(state, 'freeze');
     var radius = GameConfig.skills.freeze.radius + level * 42;
     var duration = GameConfig.skills.freeze.duration + level * 0.55;
-    var entities = state.enemies.slice();
-    if (state.boss.active) entities.push(state.boss.active);
-    entities.forEach(function (enemy) {
-      if (Utils.dist(enemy, state.player) > radius) return;
-      enemy.frozen = Math.max(enemy.frozen || 0, duration);
-    });
+    applyField(state, radius, duration);
+    skill.lastRadius = radius;
+    skill.lastDuration = duration;
     skill.cooldown = Math.max(4.4, GameConfig.skills.freeze.cooldown - level * 0.5);
     ShotSkill.burst(state, state.player.x, state.player.y, GameConfig.palette.cyan, 24);
     return true;
@@ -38,5 +57,5 @@
     return Utils.clamp(1 - state.skills.freeze.cooldown / GameConfig.skills.freeze.cooldown, 0, 1);
   }
 
-  window.FreezeSkill = { tryStart: tryStart, update: update, charge: charge };
+  window.FreezeSkill = { tryStart: tryStart, update: update, charge: charge, applyField: applyField };
 })();

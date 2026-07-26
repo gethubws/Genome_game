@@ -48,6 +48,7 @@
         maxLockedBlocks: config.map.maxLockedBlocks
       },
       words: {
+        revision: 0,
         found: [],
         occurrences: [],
         multiplier: 1,
@@ -78,7 +79,7 @@
         growth: { cooldown: 0, active: false, age: 0, duration: 0, charges: 0, multiplier: 1, totalBonus: 0 },
         splice: { cooldown: 0, active: false, age: 0, duration: 0, movedCount: 0, lastSequence: '' },
         echo: { cooldown: 0, active: false, age: 0, duration: 0, multiplier: 1, boost: 1, word: '', sourceMultiplier: 1, splicePrime: null },
-        corrode: { cooldown: 0, active: false, age: 0, duration: 0, target: null, weaken: 0 }
+        corrode: { cooldown: 0, active: false, age: 0, duration: 0, effectDuration: 0, target: null, weaken: 0 }
       },
       skillInventory: {
         unlocked: new Set(),

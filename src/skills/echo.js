@@ -118,6 +118,13 @@
     if (!skill.active) return;
     skill.age += state.dt;
     if (skill.age >= skill.duration) {
+      if (window.SkillSystem && typeof SkillSystem.emitEffect === 'function') {
+        SkillSystem.emitEffect(state, window.SkillEffects ? SkillEffects.EVENTS.SKILL_ENDED : 'skill:ended', {
+          id: 'echo',
+          skill: skill,
+          natural: true
+        });
+      }
       skill.active = false;
       skill.multiplier = 1;
       skill.boost = 1;

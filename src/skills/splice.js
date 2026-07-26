@@ -100,6 +100,43 @@
     var beforeSignature = ((state.words && state.words.potentialOccurrences) || []).map(function (entry) {
       return entry.word.text + '@' + entry.index;
     }).join('|');
+    // Splice can dismantle the word that enabled an effect. Keep the handlers
+    // from cast start so the current rearrangement still resolves completely.
+    var genomeChangedEvent = window.SkillEffects ? SkillEffects.EVENTS.GENOME_CHANGED : 'genome:changed';
+    var genomeChangedSnapshot = window.SkillEffects && typeof SkillEffects.capture === 'function'
+      ? SkillEffects.capture(state, genomeChangedEvent)
+      : null;
+    var templateCopyArmed = window.SkillSystem && typeof SkillSystem.hasEffect === 'function' && SkillSystem.hasEffect(state, 'splice.template-copy');
+    var cleanCutArmed = window.SkillSystem && typeof SkillSystem.hasEffect === 'function' && SkillSystem.hasEffect(state, 'splice.clean-cut');
+    var cutResult = { removed: [] };
+    if (cleanCutArmed) {
+      var unlockedCount = 0;
+      state.genome.letters.forEach(function (_letter, index) {
+        if (!isLocked(state.genome, index)) unlockedCount += 1;
+      });
+      if (unlockedCount > 1 && window.GenomeSystem && typeof GenomeSystem.removeFrontFactors === 'function') {
+        cutResult.removed = GenomeSystem.removeFrontFactors(state, 1) || [];
+      }
+    }
+    if (window.SkillSystem && typeof SkillSystem.emitEffect === 'function') {
+      var prepareContext = {
+        phase: 'splice:prepare',
+        wave1Handled: true,
+        beforeLog: beforeLog,
+        beforeSignature: beforeSignature,
+        genome: state.genome,
+        removeFirstUnlocked: function () {
+          if (!window.GenomeSystem || typeof GenomeSystem.removeFrontFactors !== 'function') return [];
+          var removed = GenomeSystem.removeFrontFactors(state, 1);
+          cutResult.removed = cutResult.removed.concat(removed || []);
+          return removed || [];
+        }
+      };
+      var prepareEvent = genomeChangedSnapshot && window.SkillEffects && typeof SkillEffects.emitCaptured === 'function'
+        ? SkillEffects.emitCaptured(state, genomeChangedEvent, prepareContext, genomeChangedSnapshot)
+        : SkillSystem.emitEffect(state, genomeChangedEvent, prepareContext);
+      cutResult = prepareEvent.cutResult || cutResult;
+    }
     var moved = [];
     for (var i = 0; i < moveCount; i += 1) {
       var index = firstUnlockedIndex(state.genome);
@@ -113,7 +150,32 @@
       return false;
     }
 
+    if (templateCopyArmed && moved.length && window.GenomeSystem && typeof GenomeSystem.addLetter === 'function') {
+      GenomeSystem.addLetter(state, moved[moved.length - 1], 'splice-copy');
+    }
     if (window.WordSystem && WordSystem.preview) WordSystem.preview(state);
+    var afterLog = Number(state.words && state.words.potentialLogMultiplier) || 0;
+    var changeEvent = {
+      phase: 'splice:moved',
+      wave1Handled: true,
+      beforeLog: beforeLog,
+      afterLog: afterLog,
+      beforeSignature: beforeSignature,
+      moved: moved.slice(),
+      genome: state.genome,
+      copyLetter: function (letter) {
+        if (!letter || !window.GenomeSystem || typeof GenomeSystem.addLetter !== 'function') return false;
+        var result = GenomeSystem.addLetter(state, letter, 'splice-copy');
+        return !result || result.accepted !== false;
+      },
+      cutResult: cutResult
+    };
+    if (cleanCutArmed && cutResult.removed.length && afterLog > beforeLog + 0.000001) changeEvent.cooldownFactor = 0.7;
+    if (window.SkillSystem && typeof SkillSystem.emitEffect === 'function') {
+      changeEvent = genomeChangedSnapshot && window.SkillEffects && typeof SkillEffects.emitCaptured === 'function'
+        ? SkillEffects.emitCaptured(state, genomeChangedEvent, changeEvent, genomeChangedSnapshot)
+        : SkillSystem.emitEffect(state, genomeChangedEvent, changeEvent);
+    }
     if (window.SkillSystem && typeof SkillSystem.primeEchoFromSplice === 'function') {
       SkillSystem.primeEchoFromSplice(state, beforeLog, beforeSignature);
     }
@@ -122,7 +184,8 @@
     skill.age = 0;
     skill.duration = (settings.duration || FALLBACK_CONFIG.duration) + rank * 0.08;
     skill.movedCount = moved.length;
-    skill.cooldown = Math.max(4.2, (settings.cooldown || FALLBACK_CONFIG.cooldown) - rank * 0.35);
+    var cooldown = Math.max(4.2, (settings.cooldown || FALLBACK_CONFIG.cooldown) - rank * 0.35);
+    skill.cooldown = cooldown * Utils.clamp(Number(changeEvent.cooldownFactor) || 1, 0.25, 1);
     skill.lastSequence = state.genome.letters.join('');
     state.uiDirty = true;
     burst(state);

@@ -186,6 +186,17 @@
     }
   }
 
+  function tickStatuses(state, target) {
+    if (window.SkillSystem && typeof SkillSystem.tickTargetStatuses === 'function') {
+      return SkillSystem.tickTargetStatuses(state, target);
+    }
+    var dt = Math.max(0, Number(state.dt) || 0);
+    target.weaknessTimer = Math.max(0, (target.weaknessTimer || 0) - dt);
+    target.corrodeTimer = Math.max(0, (target.corrodeTimer || 0) - dt);
+    if (target.corrodeTimer <= 0) target.corrodeFactor = 0;
+    return { target: target, pauseWeakness: false, pauseCorrode: false, pauseRecovery: false };
+  }
+
   function update(state) {
     ensurePopulation(state);
 
@@ -198,6 +209,7 @@
       syncEnemyRadius(enemy);
       enemy.wave += state.dt;
       enemy.angle += Math.sin(enemy.wave * 1.2) * state.dt * 0.4;
+      tickStatuses(state, enemy);
       var farFromView = Math.abs(enemy.x - state.camera.x) > state.screen.width * 0.68 || Math.abs(enemy.y - state.camera.y) > state.screen.height * 0.66;
       if (farFromView && (state.tick + enemy.updateStride) % 3 !== 0) {
         enemy.x += enemy.vx * state.dt;
@@ -215,7 +227,6 @@
       enemy.x = MapSystem.clampToWorldX(state, enemy.x, enemy.radius);
       enemy.revealed = Math.max(0, enemy.revealed - state.dt);
       enemy.hurt = Math.max(0, enemy.hurt - state.dt);
-      enemy.weaknessTimer = Math.max(0, (enemy.weaknessTimer || 0) - state.dt);
       enemy.revealScale = Utils.lerp(enemy.revealScale, enemy.revealed > 0 ? 1 : 0, 0.14);
       enemy.attackCooldown -= state.dt;
       enemy.attackFlash = Math.max(0, enemy.attackFlash - state.dt);
@@ -271,7 +282,7 @@
       var activeRadius = 26 + activeProgress * 270;
       if (!enemy.pulseHit && distance <= activeRadius + CombatSystem.visualRadius(state) * 0.82) {
         enemy.pulseHit = true;
-        CombatSystem.damageGrowth(state, enemy.attackDamage, enemy.attackLabel);
+        CombatSystem.damageGrowth(state, enemy.attackDamage, enemy.attackLabel, enemy);
       }
       if (enemy.attackAge >= activeDuration) {
         enemy.attackState = 'idle';
@@ -321,7 +332,7 @@
   function resolveEnemyAttack(state, enemy, player, distance) {
     if (enemy.kind === 'spitter') {
       var aim = Utils.normalize(enemy.attackTarget.x - enemy.x, enemy.attackTarget.y - enemy.y);
-      state.enemyBullets.push({ x: enemy.x, y: enemy.y, vx: aim.x * 210, vy: aim.y * 210, life: 2.5, radius: 11, damage: enemy.attackDamage, label: 'Spitter hit', color: '#ff8a38' });
+      state.enemyBullets.push({ x: enemy.x, y: enemy.y, vx: aim.x * 210, vy: aim.y * 210, life: 2.5, radius: 11, damage: enemy.attackDamage, label: 'Spitter hit', color: '#ff8a38', source: enemy });
       enemy.attackCooldown = 2.7;
     }
     enemy.attackFlash = 0.42;
@@ -333,7 +344,7 @@
       bullet.x += bullet.vx * state.dt;
       bullet.y += bullet.vy * state.dt;
       if (Utils.dist2(bullet, state.player) <= Math.pow(bullet.radius + CombatSystem.visualRadius(state) * 0.82, 2)) {
-        CombatSystem.damageGrowth(state, bullet.damage, bullet.label);
+        CombatSystem.damageGrowth(state, bullet.damage, bullet.label, bullet.source || null);
         return false;
       }
       return bullet.life > 0;
@@ -457,8 +468,8 @@
     boss.x = MapSystem.clampToWorldX(state, boss.x, boss.radius);
     boss.revealed = Math.max(0, boss.revealed - state.dt);
     boss.hurt = Math.max(0, boss.hurt - state.dt);
-    boss.weaknessTimer = Math.max(0, (boss.weaknessTimer || 0) - state.dt);
-    if (playerOutsideRoom || (boss.corrodeTimer <= 0 && boss.weaknessTimer <= 0)) {
+    var bossStatusTick = tickStatuses(state, boss);
+    if (!bossStatusTick.pauseRecovery && (playerOutsideRoom || (boss.corrodeTimer <= 0 && boss.weaknessTimer <= 0))) {
       // Corrode temporarily lowers the recovery target instead of being
       // erased by the boss-room reset. Once its timer expires, full power
       // is restored gradually as before.

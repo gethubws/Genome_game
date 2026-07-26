@@ -40,6 +40,7 @@
         active: false,
         age: 0,
         duration: 0,
+        effectDuration: 0,
         target: null,
         weaken: 0
       };
@@ -103,10 +104,9 @@
     }
   }
 
-  function applyToTarget(state, target, rank) {
-    var settings = config();
-    var weaken = Utils.clamp((settings.weaken || FALLBACK_CONFIG.weaken) + (rank || 0) * 0.045, 0.08, 0.72);
-    var duration = (settings.duration || FALLBACK_CONFIG.duration) + (rank || 0) * 0.35;
+  function applyCorrosion(state, target, weaken, duration) {
+    weaken = Utils.clamp(Number(weaken) || 0, 0.02, 0.82);
+    duration = Math.max(0.1, Number(duration) || 0.1);
     if (window.SkillSystem && typeof SkillSystem.weakenTarget === 'function') {
       var result = SkillSystem.weakenTarget(state, 'corrode', target, weaken, duration);
       weaken = result.weaken;
@@ -117,6 +117,13 @@
     target.corrodeTimer = Math.max(target.corrodeTimer || 0, duration);
     target.corrodeFactor = Math.min(0.9, 1 - (1 - (target.corrodeFactor || 0)) * (1 - weaken));
     return weaken;
+  }
+
+  function applyToTarget(state, target, rank) {
+    var settings = config();
+    var weaken = Utils.clamp((settings.weaken || FALLBACK_CONFIG.weaken) + (rank || 0) * 0.045, 0.08, 0.72);
+    var duration = (settings.duration || FALLBACK_CONFIG.duration) + (rank || 0) * 0.35;
+    return applyCorrosion(state, target, weaken, duration);
   }
 
   function tryStart(state) {
@@ -136,6 +143,7 @@
     skill.active = true;
     skill.age = 0;
     skill.duration = 0.62;
+    skill.effectDuration = (settings.duration || FALLBACK_CONFIG.duration) + rank * 0.35;
     skill.target = target;
     skill.weaken = weaken;
     skill.cooldown = Math.max(4.2, (settings.cooldown || FALLBACK_CONFIG.cooldown) - rank * 0.4);
@@ -158,13 +166,6 @@
   function update(state) {
     var skill = skillState(state);
     skill.cooldown = Math.max(0, skill.cooldown - state.dt);
-    var targets = (state.enemies || []).slice();
-    if (state.boss && state.boss.active) targets.push(state.boss.active);
-    targets.forEach(function (enemy) {
-      if (!enemy) return;
-      enemy.corrodeTimer = Math.max(0, (enemy.corrodeTimer || 0) - state.dt);
-      if (enemy.corrodeTimer <= 0) enemy.corrodeFactor = 0;
-    });
     if (!skill.active) return;
     skill.age += state.dt;
     if (skill.age >= skill.duration) {
@@ -184,6 +185,7 @@
     update: update,
     charge: charge,
     applyToTarget: applyToTarget,
+    applyCorrosion: applyCorrosion,
     level: level
   };
 })();

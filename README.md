@@ -95,6 +95,12 @@ Growth creatures make up at least half of the normal spawn pool. Some are genera
 
 Every matching word occurrence contributes affinity to its skill family. Overlapping words, repeated words, and matches contained inside longer words all count; the skill system does not impose a one-word-per-expression limit.
 
+### Skill effect catalog
+
+The ten active-skill families now contain ten word-driven effects each, for a total catalog of 100 effects. The playable dictionary contains 3,104 words, with 2,278 assigned to a skill family. Ordinary mapped words retain the family's base current and also receive one stable specialization, so the same word always unlocks the same effect branch. Each of the 80 non-base branches also has a unique semantic trigger word, while direct core words such as `dash`, `bolt`, `freeze`, `join`, `repeat`, and `rust` keep explicit variants and stronger affinity.
+
+Only effects supported by words in the live genome are active. The Boss reward backpack lists each active effect, its contributing words and repeated occurrence counts, and its current potency. Effect hooks are registered through `src/systems/skill-effects.js`; the four catalog waves live in `src/skills/effects-wave1.js` through `effects-wave4.js`.
+
 Visual words:
 
 - `red`, `blue`, `gold`, `dark`: recolor the avatar.

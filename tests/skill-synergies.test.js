@@ -104,6 +104,13 @@ load('src/data/skill-word-map.js');
 load('src/systems/words.js');
 load('src/systems/skills.js');
 
+function supportOccurrence(id, index = 0) {
+  return {
+    index,
+    word: context.WordSystem.byText[id] || { text: id, family: id, skill: id, affinity: 1 }
+  };
+}
+
 function createState(activeSlots = [null, null, null]) {
   return {
     paused: false,
@@ -151,7 +158,7 @@ function createState(activeSlots = [null, null, null]) {
       unlocked: new Set(),
       occurrences: [],
       found: [],
-      potentialOccurrences: [],
+      potentialOccurrences: activeSlots.filter(Boolean).map(supportOccurrence),
       potentialLogMultiplier: 0,
       potentialMultiplier: 1,
       logMultiplier: 0,
@@ -169,6 +176,7 @@ function createState(activeSlots = [null, null, null]) {
 
 // A synergy exists only while both required skills occupy active slots.
 const equipmentState = createState();
+equipmentState.words.potentialOccurrences = ['scan', 'shot'].map(supportOccurrence);
 assert.strictEqual(context.SkillSystem.equipAt(equipmentState, 'scan', 0), true);
 assert.strictEqual(context.SkillSystem.hasSynergy(equipmentState, 'lockOn'), false);
 assert.strictEqual(context.SkillSystem.equipAt(equipmentState, 'shot', 1), true);
@@ -294,6 +302,7 @@ variantState.words.occurrences = [
   { word: { text: 'bite', family: 'shot', variant: 'bite', affinity: 1.5 } },
   { word: { text: 'pulse', family: 'nova', variant: 'pulse', affinity: 1.5 } }
 ];
+variantState.words.potentialOccurrences = variantState.words.occurrences.slice();
 assert.strictEqual(context.SkillSystem.rawVariantPotency(variantState, 'shot', 'bolt'), 3);
 assert.strictEqual(context.SkillSystem.variantPotency(variantState, 'shot', 'bolt'), 4);
 assert.strictEqual(context.SkillSystem.rawVariantPotency(variantState, 'shot', 'bite'), 1.5);
@@ -315,28 +324,29 @@ load('src/skills/echo.js');
 
 const originalPreview = context.WordSystem.preview;
 const primedWord = { text: 'ware', mult: 2.2, family: 'echo', variant: 'word', affinity: 1.5 };
+const spliceSupport = { index: 0, word: { text: 'splice-support', family: 'splice', skill: 'splice', affinity: 0.5 } };
 context.WordSystem.preview = (state) => {
   const changed = state.genome.letters.join('') === 'warex';
-  state.words.potentialOccurrences = changed ? [{ word: primedWord, index: 0 }] : [];
+  state.words.potentialOccurrences = changed ? [spliceSupport, { word: primedWord, index: 0 }] : [spliceSupport];
   state.words.potentialLogMultiplier = changed ? Math.log(2.2) : 0;
   state.words.potentialMultiplier = changed ? 2.2 : 1;
 };
 const productiveSplice = createState(['splice', 'echo', null]);
 productiveSplice.genome.letters = ['x', 'w', 'a', 'r', 'e'];
-productiveSplice.words.potentialOccurrences = [];
+productiveSplice.words.potentialOccurrences = [spliceSupport];
 productiveSplice.words.potentialLogMultiplier = 0;
 assert.strictEqual(context.SpliceSkill.tryStart(productiveSplice), true);
 assert(productiveSplice.skills.echo.splicePrime, 'productive Splice should prime Echo');
 assert.strictEqual(productiveSplice.skills.echo.splicePrime.word.text, 'ware');
 
 context.WordSystem.preview = (state) => {
-  state.words.potentialOccurrences = [{ word: primedWord, index: 0 }];
+  state.words.potentialOccurrences = [spliceSupport, { word: primedWord, index: 0 }];
   state.words.potentialLogMultiplier = Math.log(2.2);
   state.words.potentialMultiplier = 2.2;
 };
 const ineffectiveSplice = createState(['splice', 'echo', null]);
 ineffectiveSplice.genome.letters = ['x', 'w', 'a', 'r', 'e'];
-ineffectiveSplice.words.potentialOccurrences = [{ word: primedWord, index: 0 }];
+ineffectiveSplice.words.potentialOccurrences = [spliceSupport, { word: primedWord, index: 0 }];
 ineffectiveSplice.words.potentialLogMultiplier = Math.log(2.2);
 assert.strictEqual(context.SpliceSkill.tryStart(ineffectiveSplice), true);
 assert.strictEqual(ineffectiveSplice.skills.echo.splicePrime, null);

@@ -47,6 +47,13 @@
         enemy.revealed = skill.revealTime;
         enemy.revealScale = Math.max(enemy.revealScale, 0.3);
         skill.hits.add(enemy.id);
+        if (window.SkillSystem && typeof SkillSystem.emitEffect === 'function') {
+          SkillSystem.emitEffect(state, window.SkillEffects ? SkillEffects.EVENTS.TARGET_REVEALED : 'target:revealed', {
+            sourceId: 'scan',
+            target: enemy,
+            revealTime: skill.revealTime
+          });
+        }
       }
     });
 

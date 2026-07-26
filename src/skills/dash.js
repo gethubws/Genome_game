@@ -12,8 +12,40 @@
 
   function tryStart(state) {
     var skill = state.skills.dash;
-    if (state.paused || skill.cooldown > 0 || skill.active) return false;
+    if (state.paused) return false;
 
+    // Vector Bend lets an active Dash redirect once without creating a new
+    // cooldown cycle. The remaining duration is shortened so the turn is a
+    // deliberate commitment rather than a free second Dash.
+    if (skill.active) {
+      var canBend = window.SkillSystem && typeof SkillSystem.hasEffect === 'function' && SkillSystem.hasEffect(state, 'dash.vector-bend');
+      if (!canBend || (skill.redirectsLeft || 0) <= 0) return false;
+      var bendDir = inputDirection(state);
+      var remaining = Math.max(0, skill.duration - skill.age);
+      skill.direction = bendDir;
+      skill.age += remaining * 0.25;
+      skill.redirectsLeft -= 1;
+      if (window.SkillSystem && typeof SkillSystem.emitEffect === 'function') {
+        SkillSystem.emitEffect(state, 'dash:redirected', { skill: skill, direction: bendDir });
+      }
+      return true;
+    }
+    if (skill.cooldown > 0) return false;
+
+    var dir = inputDirection(state);
+    var level = dashLevel(state);
+    skill.active = true;
+    skill.age = 0;
+    skill.direction = dir;
+    skill.redirectsLeft = window.SkillSystem && typeof SkillSystem.hasEffect === 'function' && SkillSystem.hasEffect(state, 'dash.vector-bend') ? 1 : 0;
+    skill.duration = GameConfig.skills.dash.duration + level * 0.04;
+    skill.maxBoost = GameConfig.skills.dash.maxBoost + level * 0.18;
+    skill.speed = GameConfig.skills.dash.speed + level * 38;
+    skill.cooldown = Math.max(1.7, GameConfig.skills.dash.cooldown - level * 0.22);
+    return true;
+  }
+
+  function inputDirection(state) {
     var angle = state.player.angle;
     var input = state.input.keys;
     var x = 0;
@@ -22,17 +54,7 @@
     if (input.d || input.arrowright) x += 1;
     if (input.w || input.arrowup) y -= 1;
     if (input.s || input.arrowdown) y += 1;
-    var dir = Math.abs(x) + Math.abs(y) > 0 ? Utils.normalize(x, y) : { x: Math.cos(angle), y: Math.sin(angle) };
-
-    var level = dashLevel(state);
-    skill.active = true;
-    skill.age = 0;
-    skill.direction = dir;
-    skill.duration = GameConfig.skills.dash.duration + level * 0.04;
-    skill.maxBoost = GameConfig.skills.dash.maxBoost + level * 0.18;
-    skill.speed = GameConfig.skills.dash.speed + level * 38;
-    skill.cooldown = Math.max(1.7, GameConfig.skills.dash.cooldown - level * 0.22);
-    return true;
+    return Math.abs(x) + Math.abs(y) > 0 ? Utils.normalize(x, y) : { x: Math.cos(angle), y: Math.sin(angle) };
   }
 
   function update(state) {
@@ -47,6 +69,9 @@
     skill.boost = Utils.lerp(1.08, skill.maxBoost, t);
     state.player.vx = skill.direction.x * skill.speed * (1 + swell * 0.25);
     state.player.vy = skill.direction.y * skill.speed * (1 + swell * 0.25);
+    if (window.SkillSystem && typeof SkillSystem.emitEffect === 'function') {
+      SkillSystem.emitEffect(state, 'dash:update', { skill: skill, progress: t });
+    }
 
     if (Math.random() < 0.85) {
       state.particles.push(GameState.createParticle(
@@ -61,6 +86,9 @@
     }
 
     if (t >= 1) {
+      if (window.SkillSystem && typeof SkillSystem.emitEffect === 'function') {
+        SkillSystem.emitEffect(state, window.SkillEffects ? SkillEffects.EVENTS.SKILL_ENDED : 'skill:ended', { id: 'dash', skill: skill, natural: true });
+      }
       skill.active = false;
       skill.boost = 1;
     }

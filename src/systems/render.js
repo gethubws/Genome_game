@@ -448,7 +448,10 @@
 
   function drawAttackTelegraph(state, ctx, enemy, s, style) {
     if (enemy.attackState === 'idle') return;
-    if (enemy.kind === 'hunter') return;
+    var forecast = window.SkillSystem && typeof SkillSystem.attackForecast === 'function'
+      ? SkillSystem.attackForecast(state, enemy)
+      : null;
+    if (enemy.kind === 'hunter' && !forecast) return;
     var duration = enemy.attackState === 'pulse' ? 0.78 : enemy.kind === 'disruptor' ? 1.15 : enemy.kind === 'spitter' ? 0.82 : 0.62;
     var progress = Utils.clamp(enemy.attackAge / duration, 0, 1);
     ctx.save();
@@ -478,6 +481,21 @@
       ctx.moveTo(s.x, s.y);
       ctx.lineTo(target.x, target.y);
       ctx.stroke();
+    }
+    if (forecast) {
+      var impact = Utils.worldToScreen(state, forecast.target || enemy.attackTarget || state.player);
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 0.92;
+      ctx.strokeStyle = '#f8fbff';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(impact.x, impact.y, Math.max(8, Number(forecast.radius) || 8), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = '#f8fbff';
+      ctx.font = '900 10px ui-sans-serif, system-ui';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(Math.max(0, Number(forecast.timeRemaining) || 0).toFixed(1) + 's', impact.x, impact.y - Math.max(12, Number(forecast.radius) || 8));
     }
     ctx.restore();
   }

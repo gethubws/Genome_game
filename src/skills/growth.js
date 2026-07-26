@@ -109,6 +109,17 @@
     var gain = Math.max(0, Number(amount) || 0);
     if (!skill.active || skill.charges <= 0 || (enemy && enemy.dropType !== 'growth')) return gain;
 
+    if (window.SkillSystem && typeof SkillSystem.emitEffect === 'function') {
+      var beforeEvent = SkillSystem.emitEffect(state, window.SkillEffects ? SkillEffects.EVENTS.GROWTH_GAIN : 'growth:gain', {
+        phase: 'before',
+        amount: gain,
+        baseAmount: gain,
+        enemy: enemy || null,
+        skill: skill,
+        empowered: true
+      });
+      gain = Math.max(0, Number(beforeEvent.amount) || 0);
+    }
     var enhanced = gain * Math.max(1, skill.multiplier || 1);
     skill.totalBonus += enhanced - gain;
     skill.charges -= 1;
@@ -116,6 +127,18 @@
       skill.charges = 0;
       skill.active = false;
       skill.multiplier = 1;
+    }
+    if (window.SkillSystem && typeof SkillSystem.emitEffect === 'function') {
+      var afterEvent = SkillSystem.emitEffect(state, window.SkillEffects ? SkillEffects.EVENTS.GROWTH_GAIN : 'growth:gain', {
+        phase: 'after',
+        amount: enhanced,
+        baseAmount: Math.max(0, Number(amount) || 0),
+        enemy: enemy || null,
+        skill: skill,
+        empowered: true,
+        consumedCharge: true
+      });
+      enhanced = Math.max(0, Number(afterEvent.amount) || 0);
     }
     return enhanced;
   }

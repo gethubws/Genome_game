@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>几何潜游：吞噬与进化</title>
-  <link rel="stylesheet" href="styles.css?v=20260726-3">
+  <link rel="stylesheet" href="styles.css?v=20260726-5">
 </head>
 <body>
   <main class="game-shell">
@@ -150,6 +150,10 @@
           <header><strong data-i18n="skillBackpack" data-i18n-en="Skill Backpack">Skill Backpack</strong><span data-i18n="selectThree" data-i18n-en="Select up to three skills">Select up to three skills</span></header>
           <div class="equipped-slots" id="equippedSlots"></div>
           <div class="skill-synergies" id="skillSynergies" aria-live="polite"></div>
+          <section class="skill-effect-summary" id="skillEffectSummary" aria-live="polite" aria-hidden="true">
+            <div class="skill-effect-header"><strong id="skillEffectTitle">Current effects</strong><span id="skillEffectCount"></span></div>
+            <div class="skill-effect-list" id="skillEffectList"></div>
+          </section>
           <div class="skill-inventory" id="skillInventory"></div>
         </section>
         <div class="clear-image-panel" id="clearImagePanel" aria-live="polite">
@@ -213,28 +217,34 @@
   <script src="src/systems/audio.js?v=20260726-3"></script>
   <script src="src/data/common-words.js?v=20260726-3"></script>
   <script src="src/data/skill-word-map.js?v=20260726-3"></script>
-  <script src="src/core/state.js?v=20260726-3"></script>
-  <script src="src/systems/words.js?v=20260726-3"></script>
+  <script src="src/data/skill-effect-traits.js?v=20260726-5"></script>
+  <script src="src/core/state.js?v=20260726-5"></script>
+  <script src="src/systems/words.js?v=20260726-5"></script>
   <script src="src/systems/input.js?v=20260726-3"></script>
   <script src="src/systems/map.js?v=20260726-3"></script>
   <script src="src/systems/recommendations.js?v=20260726-3"></script>
-  <script src="src/systems/enemies.js?v=20260726-3"></script>
+  <script src="src/systems/enemies.js?v=20260726-5"></script>
   <script src="src/systems/genome.js?v=20260726-3"></script>
-  <script src="src/systems/combat.js?v=20260726-3"></script>
+  <script src="src/systems/combat.js?v=20260726-5"></script>
   <script src="src/systems/images.js?v=20260726-3"></script>
-  <script src="src/skills/scan.js?v=20260726-3"></script>
-  <script src="src/skills/dash.js?v=20260726-3"></script>
-  <script src="src/skills/shot.js?v=20260726-3"></script>
-  <script src="src/skills/nova.js?v=20260726-3"></script>
-  <script src="src/skills/guard.js?v=20260726-3"></script>
-  <script src="src/skills/freeze.js?v=20260726-3"></script>
-  <script src="src/skills/growth.js?v=20260726-3"></script>
-  <script src="src/skills/splice.js?v=20260726-3"></script>
-  <script src="src/skills/echo.js?v=20260726-3"></script>
-  <script src="src/skills/corrode.js?v=20260726-3"></script>
-  <script src="src/systems/skills.js?v=20260726-3"></script>
-  <script src="src/ui/hud.js?v=20260726-3"></script>
-  <script src="src/systems/render.js?v=20260726-3"></script>
+  <script src="src/skills/scan.js?v=20260726-5"></script>
+  <script src="src/skills/dash.js?v=20260726-5"></script>
+  <script src="src/skills/shot.js?v=20260726-5"></script>
+  <script src="src/skills/nova.js?v=20260726-5"></script>
+  <script src="src/skills/guard.js?v=20260726-5"></script>
+  <script src="src/skills/freeze.js?v=20260726-5"></script>
+  <script src="src/skills/growth.js?v=20260726-5"></script>
+  <script src="src/skills/splice.js?v=20260726-5"></script>
+  <script src="src/skills/echo.js?v=20260726-5"></script>
+  <script src="src/skills/corrode.js?v=20260726-5"></script>
+  <script src="src/systems/skills.js?v=20260726-5"></script>
+  <script src="src/systems/skill-effects.js?v=20260726-6"></script>
+  <script src="src/skills/effects-wave1.js?v=20260726-5"></script>
+  <script src="src/skills/effects-wave2.js?v=20260726-5"></script>
+  <script src="src/skills/effects-wave3.js?v=20260726-6"></script>
+  <script src="src/skills/effects-wave4.js?v=20260726-6"></script>
+  <script src="src/ui/hud.js?v=20260726-5"></script>
+  <script src="src/systems/render.js?v=20260726-5"></script>
   <script src="src/game.js?v=20260726-3"></script>
 </body>
 </html>

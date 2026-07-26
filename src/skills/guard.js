@@ -5,6 +5,7 @@
     var level = SkillSystem.level(state, 'guard');
     skill.active = true;
     skill.age = 0;
+    skill.absorbed = false;
     skill.duration = GameConfig.skills.guard.duration + level * 0.45;
     skill.cooldown = Math.max(5.4, GameConfig.skills.guard.cooldown - level * 0.55);
     ShotSkill.burst(state, state.player.x, state.player.y, GameConfig.palette.gold, 14);
@@ -16,7 +17,17 @@
     skill.cooldown = Math.max(0, skill.cooldown - state.dt);
     if (!skill.active) return;
     skill.age += state.dt;
-    if (skill.age >= skill.duration) skill.active = false;
+    if (skill.age >= skill.duration) {
+      if (window.SkillSystem && typeof SkillSystem.emitEffect === 'function') {
+        SkillSystem.emitEffect(state, window.SkillEffects ? SkillEffects.EVENTS.SKILL_ENDED : 'skill:ended', {
+          id: 'guard',
+          skill: skill,
+          natural: true,
+          absorbed: !!skill.absorbed
+        });
+      }
+      skill.active = false;
+    }
   }
 
   function charge(state) {

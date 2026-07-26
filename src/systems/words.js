@@ -72,6 +72,20 @@
     { text: 'genome', mult: 4.6, type: 'plain' }
   ];
 
+  // Every hand-authored effect branch has one real trigger word. Adding those
+  // words here guarantees that semantic effects remain obtainable even when a
+  // trigger falls outside the imported frequency list.
+  (window.SkillEffectSemanticEntries || []).forEach(function (entry) {
+    var length = String(entry.word || '').length;
+    SPECIAL_WORDS.push({
+      text: entry.word,
+      mult: 1.15 + Math.min(0.95, length * 0.07),
+      type: 'skill',
+      affinity: 1.25,
+      effectWord: true
+    });
+  });
+
   function normalizeText(value) {
     return String(value == null ? '' : value).toLowerCase().replace(/[^a-z]/g, '');
   }
@@ -111,13 +125,41 @@
   };
   WORDS.forEach(function (word) {
     var metadata = (window.SkillWordMap || {})[word.text];
-    var skillId = coreOverrides[word.text] || (metadata && familyToSkill[metadata.family]) || word.skill || null;
+    var mappedSkillId = (metadata && familyToSkill[metadata.family]) || null;
+    var isCoreSkillWord = !!coreOverrides[word.text] || !!(metadata && metadata.core);
+    var semanticSkillId = !isCoreSkillWord && window.SkillEffectFamilyForWord
+      ? SkillEffectFamilyForWord(word.text)
+      : null;
+    var skillId = coreOverrides[word.text]
+      || (isCoreSkillWord && mappedSkillId)
+      || semanticSkillId
+      || mappedSkillId
+      || word.skill
+      || null;
     if (!skillId) return;
+    // Core words retain the generated branch. Ordinary semantic trigger words
+    // start from `base`, so a variant inherited from another family cannot
+    // override their hand-authored effect trait.
+    var mappedVariant = semanticSkillId ? 'base' : ((metadata && metadata.variant) || 'base');
     word.family = skillId;
     word.skill = skillId;
-    word.variant = coreOverrides[word.text] ? 'core' : ((metadata && metadata.variant) || 'base');
-    word.affinity = coreOverrides[word.text] ? 1.65 : Math.max(0.5, Number(metadata && metadata.affinity) || 1);
-    word.coreSkillWord = !!coreOverrides[word.text] || !!(metadata && metadata.core);
+    word.variant = coreOverrides[word.text] ? 'core' : mappedVariant;
+    word.affinity = coreOverrides[word.text]
+      ? 1.65
+      : Math.max(0.5, Number(metadata && metadata.affinity) || Number(word.affinity) || 1);
+    word.coreSkillWord = isCoreSkillWord;
+    word.semanticFamilyWord = !!semanticSkillId;
+    word.coreVariant = isCoreSkillWord && mappedVariant !== 'base' ? mappedVariant : null;
+    word.traits = mappedVariant === 'base' ? [] : [mappedVariant];
+    if (isCoreSkillWord) word.traits.push('core');
+    word.baseFamilyWord = mappedVariant === 'base' && !isCoreSkillWord;
+    if (window.SkillEffectTraitForWord) {
+      var effectTrait = SkillEffectTraitForWord(word.text, skillId, mappedVariant);
+      if (effectTrait) {
+        word.effectTrait = effectTrait;
+        if (word.traits.indexOf(effectTrait) === -1) word.traits.push(effectTrait);
+      }
+    }
   });
 
   var byText = Object.create(null);
@@ -260,6 +302,7 @@
   function preview(state) {
     var occurrences = findOccurrences(state.genome.letters);
     var details = multiplierDetails(occurrences);
+    state.words.revision = (Number(state.words.revision) || 0) + 1;
     state.words.potentialOccurrences = occurrences;
     state.words.potentialFound = uniqueWords(occurrences);
     state.words.potentialMultiplier = details.value;
@@ -269,6 +312,7 @@
     state.words.potentialWordCount = occurrences.length;
     state.words.potentialOccurrenceCount = occurrences.length;
     state.words.potentialOccurrenceCounts = occurrenceCounts(occurrences);
+    if (window.SkillEffects && typeof SkillEffects.invalidate === 'function') SkillEffects.invalidate(state);
     state.uiDirty = true;
   }
 

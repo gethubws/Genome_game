@@ -12,7 +12,7 @@
       visuals: '画面与辅助', screenShake: '屏幕震动', flash: '闪光强度', combatText: '战斗文字', quality: '画面质量', off: '关闭', low: '低', standard: '标准', soft: '柔和', full: '完整', compact: '精简', performance: '性能', high: '高',
       balanceLab: '打开数值调试',
       display: '显示', fullscreen: '全屏', enterFullscreen: '进入全屏', exitFullscreen: '退出全屏', controls: '操作说明', move: '移动', aim: '瞄准', useSkills: '使用技能', openSettings: '打开设置', reset: '恢复默认设置',
-      skillBackpack: '技能背包', selectThree: '最多装备三个技能', equipped: '已装备', equip: '装备', emptySlot: '空技能槽', allSlotsFull: '三个技能槽已满', removeSkillFirst: '请先卸下一个已装备技能',
+      skillBackpack: '技能背包', selectThree: '最多装备三个技能', equipped: '已装备', equip: '装备', emptySlot: '空技能槽', allSlotsFull: '三个技能槽已满', removeSkillFirst: '请先卸下一个已装备技能', skillUnpowered: '暂未供能', skillUnpoweredShort: '未供能', skillWordMissing: '当前基因组缺少对应单词', potencyLabel: '强度',
       noneYet: '暂无', routeHint: '路线提示', nextMultiplier: '下一倍率', sequenceMultiplier: '当前序列倍率', skillSnapshotMultiplier: '技能快照倍率', scanChooseDescend: '扫描、选择、下潜', bossCurrent: 'Boss 战区', settingsSaved: '设置已保存',
       scan: '扫描', dash: '冲刺', shot: '基因弹', nova: '新星脉冲', guard: '护盾', freeze: '冻结',
       skill_scan: '显示附近敌人的基因与战力。', skill_dash: '向前爆发冲刺并暂时提升战力。', skill_shot: '发射削弱敌人的基因弹。', skill_nova: '削弱附近的所有敌人。', skill_guard: '抵挡下一次破坏基因的攻击。', skill_freeze: '大范围减慢敌人。',

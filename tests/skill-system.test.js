@@ -87,10 +87,20 @@ const potencyState = {
 context.SkillSystem.refreshUnlocks(potencyState);
 assert.strictEqual(potencyState.skillInventory.unlocked.has('echo'), true);
 assert.strictEqual(potencyState.skillInventory.unlocked.has('dash'), false);
-assert.strictEqual(context.SkillSystem.rawPotency(potencyState, 'echo'), 1.65);
-assert.strictEqual(context.SkillSystem.rawPotency(potencyState, 'dash'), 0);
-assert.strictEqual(context.SkillSystem.rawPotency(potencyState, 'dash', 'potential'), 1.65);
+assert.strictEqual(context.SkillSystem.rawPotency(potencyState, 'echo'), 0);
+assert.strictEqual(context.SkillSystem.rawPotency(potencyState, 'echo', 'settled'), 1.65);
+assert.strictEqual(context.SkillSystem.rawPotency(potencyState, 'dash'), 1.65);
+assert.strictEqual(context.SkillSystem.rawPotency(potencyState, 'dash', 'settled'), 0);
 assert.strictEqual(context.SkillSystem.localizedName(context.SkillSystem.byId.echo), '回响');
+
+const livePotencyState = {
+  words: {
+    occurrences: [{ word: { text: 'old-dash', family: 'dash', affinity: 4 } }],
+    potentialOccurrences: [{ word: { text: 'live-dash', family: 'dash', affinity: 0.5 } }]
+  }
+};
+assert.strictEqual(context.SkillSystem.rawPotency(livePotencyState, 'dash'), 0.5, 'live expression drives default skill strength');
+assert.strictEqual(context.SkillSystem.rawPotency(livePotencyState, 'dash', 'settled'), 4, 'settled strength remains available explicitly');
 
 load('src/skills/scan.js');
 load('src/skills/dash.js');

@@ -26,7 +26,7 @@
     var weaken = GameConfig.skills.shot.weaken + level * 0.055;
     skill.cooldown = Math.max(0.34, GameConfig.skills.shot.cooldown - level * 0.08);
 
-    state.bullets.push({
+    var bullet = {
       x: state.player.x + Math.cos(angle) * (state.player.radius + 8),
       y: state.player.y + Math.sin(angle) * (state.player.radius + 8),
       vx: Math.cos(angle) * speed,
@@ -36,8 +36,18 @@
       maxLife: GameConfig.skills.shot.life,
       weaken: weaken,
       weaknessDuration: 1.35,
-      color: level > 1 ? GameConfig.palette.gold : GameConfig.palette.mint
-    });
+      color: level > 1 ? GameConfig.palette.gold : GameConfig.palette.mint,
+      hitIds: Object.create(null)
+    };
+    if (window.SkillSystem && typeof SkillSystem.emitEffect === 'function') {
+      var prepare = SkillSystem.emitEffect(state, window.SkillEffects ? SkillEffects.EVENTS.PROJECTILE_PREPARE : 'projectile:prepare', {
+        id: 'shot',
+        bullet: bullet,
+        level: level
+      });
+      bullet = prepare.bullet || bullet;
+    }
+    state.bullets.push(bullet);
     return true;
   }
 
@@ -55,6 +65,7 @@
       if (state.boss.active) entities.push(state.boss.active);
       for (var i = 0; i < entities.length; i += 1) {
         var enemy = entities[i];
+        if (enemy.id && bullet.hitIds && bullet.hitIds[enemy.id]) continue;
         var rr = enemy.radius + bullet.radius;
         if (Utils.dist2(enemy, bullet) <= rr * rr) {
           hit = enemy;
@@ -63,14 +74,20 @@
       }
 
       if (hit) {
+        var hitEvent = { id: 'shot', bullet: bullet, target: hit, weaken: bullet.weaken, duration: bullet.weaknessDuration, consume: true };
+        if (window.SkillSystem && typeof SkillSystem.emitEffect === 'function') {
+          hitEvent = SkillSystem.emitEffect(state, window.SkillEffects ? SkillEffects.EVENTS.PROJECTILE_HIT : 'projectile:hit', hitEvent);
+        }
+        if (hit.id && bullet.hitIds) bullet.hitIds[hit.id] = true;
         if (window.SkillSystem && typeof SkillSystem.weakenTarget === 'function') {
-          SkillSystem.weakenTarget(state, 'shot', hit, bullet.weaken, bullet.weaknessDuration);
+          SkillSystem.weakenTarget(state, 'shot', hit, hitEvent.weaken, hitEvent.duration);
         } else {
-          hit.power = Math.max(0.1, hit.power * (1 - bullet.weaken));
+          hit.power = Math.max(0.1, hit.power * (1 - hitEvent.weaken));
           hit.hurt = 0.45;
         }
         burst(state, bullet.x, bullet.y, bullet.color, 10);
-        return false;
+        if (hitEvent.consume !== false) return false;
+        return bullet.life > 0;
       }
 
       if (Math.random() < 0.35) {

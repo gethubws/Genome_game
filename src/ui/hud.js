@@ -53,6 +53,10 @@
     els.skillBackpack = document.getElementById('skillBackpack');
     els.equippedSlots = document.getElementById('equippedSlots');
     els.skillSynergies = document.getElementById('skillSynergies');
+    els.skillEffectSummary = document.getElementById('skillEffectSummary');
+    els.skillEffectTitle = document.getElementById('skillEffectTitle');
+    els.skillEffectCount = document.getElementById('skillEffectCount');
+    els.skillEffectList = document.getElementById('skillEffectList');
     els.skillInventory = document.getElementById('skillInventory');
     els.clearImagePanel = document.getElementById('clearImagePanel');
     els.clearImagePreview = document.getElementById('clearImagePreview');
@@ -486,9 +490,11 @@
       var icon = button.querySelector('.icon');
       var label = button.querySelector('.label');
       var cooldown = button.querySelector('.cooldown');
-      button.className = 'ability' + (definition ? ' ' + definition.id + '-ability' : ' empty');
-      button.disabled = !definition;
+      var supported = !!(definition && SkillSystem.isSupported && SkillSystem.isSupported(state, id));
+      button.className = 'ability' + (definition ? ' ' + definition.id + '-ability' : ' empty') + (definition && !supported ? ' unsupported' : '');
+      button.disabled = !definition || !supported;
       if (!definition) {
+        button.title = '';
         icon.textContent = '+';
         label.textContent = I18n.t('empty', 'Empty');
         cooldown.textContent = I18n.t('locked', 'locked');
@@ -498,6 +504,13 @@
       button.style.setProperty('--skill-color', definition.color);
       icon.textContent = definition.icon;
       label.textContent = localizedSkillName(definition);
+      if (!supported) {
+        cooldown.textContent = I18n.t('skillUnpoweredShort', 'offline');
+        button.title = I18n.t('skillWordMissing', 'The current genome is missing a matching word');
+        updateAbility(button, 0, false);
+        return;
+      }
+      button.title = localizedSkillDescription(definition);
       var value = SkillSystem.cooldown(state, id);
       cooldown.textContent = value <= 0 ? I18n.t('ready', 'ready') : value.toFixed(1) + 's';
       updateAbility(button, SkillSystem.charge(state, id), value <= 0);
@@ -610,10 +623,11 @@
     els.equippedSlots.innerHTML = '';
     state.player.activeSlots.forEach(function (id, index) {
       var definition = SkillSystem.byId[id];
+      var supported = !!(definition && SkillSystem.isSupported && SkillSystem.isSupported(state, id));
       var slot = document.createElement('button');
       slot.type = 'button';
-      slot.className = 'backpack-slot' + (definition ? ' filled' : '');
-      slot.innerHTML = '<span>' + (index + 1) + '</span><strong>' + (definition ? localizedSkillName(definition) : I18n.t('emptySlot', 'Empty slot')) + '</strong>';
+      slot.className = 'backpack-slot' + (definition ? ' filled' : '') + (definition && !supported ? ' unsupported' : '');
+      slot.innerHTML = '<span>' + (index + 1) + '</span><span class="backpack-slot-copy"><strong>' + (definition ? localizedSkillName(definition) : I18n.t('emptySlot', 'Empty slot')) + '</strong>' + (definition && !supported ? '<small>' + I18n.t('skillUnpowered', 'Temporarily unpowered') + '</small>' : '') + '</span>';
       slot.addEventListener('click', function () {
         SkillSystem.unequipAt(state, index);
         renderSkillBackpack(state);
@@ -622,17 +636,28 @@
     });
 
     renderSkillSynergies(state);
+    renderSkillEffects(state);
 
     els.skillInventory.innerHTML = '';
     SkillSystem.definitions.forEach(function (definition) {
       var unlocked = state.skillInventory.unlocked.has(definition.id);
       var equipped = state.player.activeSlots.indexOf(definition.id) !== -1;
+      var supported = !!(SkillSystem.isSupported && SkillSystem.isSupported(state, definition.id));
       var card = document.createElement('button');
       card.type = 'button';
-      card.className = 'inventory-skill' + (unlocked ? ' unlocked' : ' locked') + (equipped ? ' equipped' : '');
-      card.disabled = !unlocked;
+      card.className = 'inventory-skill' + (unlocked ? ' unlocked' : ' locked') + (equipped ? ' equipped' : '') + (unlocked && !supported ? ' unsupported' : '');
+      card.disabled = !unlocked || (!supported && !equipped);
       card.style.setProperty('--skill-color', definition.color);
-      card.innerHTML = '<span class="inventory-icon">' + definition.icon + '</span><span class="inventory-copy"><strong>' + localizedSkillName(definition) + '</strong><small>' + (unlocked ? localizedSkillDescription(definition) : definition.words.join(' / ')) + '</small></span><span class="inventory-state">' + (equipped ? I18n.t('equipped', 'Equipped') : unlocked ? I18n.t('equip', 'Equip') : I18n.t('locked', 'Locked')) + '</span>';
+      var inventoryDetail = unlocked ? localizedSkillDescription(definition) : definition.words.join(' / ');
+      if (unlocked && !supported) inventoryDetail += ' · ' + I18n.t('skillWordMissing', 'The current genome is missing a matching word');
+      var inventoryState = !unlocked
+        ? I18n.t('locked', 'Locked')
+        : !supported
+          ? I18n.t('skillUnpowered', 'Temporarily unpowered')
+          : equipped
+            ? I18n.t('equipped', 'Equipped')
+            : I18n.t('equip', 'Equip');
+      card.innerHTML = '<span class="inventory-icon">' + definition.icon + '</span><span class="inventory-copy"><strong>' + localizedSkillName(definition) + '</strong><small>' + inventoryDetail + '</small></span><span class="inventory-state">' + inventoryState + '</span>';
       card.addEventListener('click', function () {
         if (equipped) {
           SkillSystem.unequipAt(state, state.player.activeSlots.indexOf(definition.id));
@@ -668,6 +693,158 @@
       chip.appendChild(copy);
       els.skillSynergies.appendChild(chip);
     });
+  }
+
+  function effectTraitMatches(word, traitSpec) {
+    var requested = Array.isArray(traitSpec) ? traitSpec : (traitSpec ? [traitSpec] : []);
+    if (!requested.length) return true;
+    if (!word) return false;
+    return requested.some(function (trait) {
+      var weights = word.traitWeights;
+      var traits = word.traits;
+      if (trait === 'base') {
+        if (word.baseFamilyWord) return true;
+        var hasTraits = Array.isArray(traits) ? traits.length > 0 : !!(traits && typeof traits === 'object' && Object.keys(traits).length);
+        var hasWeights = !!(weights && typeof weights === 'object' && Object.keys(weights).some(function (key) {
+          return key !== 'base' && Number(weights[key]) > 0;
+        }));
+        if (!hasTraits && !hasWeights && (!word.variant || word.variant === 'base')) return true;
+      }
+      if (weights && Number(weights[trait]) > 0) return true;
+      if (Array.isArray(traits) && traits.indexOf(trait) !== -1) return true;
+      if (traits && typeof traits === 'object' && Number(traits[trait]) > 0) return true;
+      if (word.variant === trait) return true;
+      return trait === 'core' && word.coreSkillWord === true;
+    });
+  }
+
+  function effectSourceWords(state, entry) {
+    if (!window.SkillEffects || typeof SkillEffects.occurrences !== 'function') return [];
+    var definition = entry.definition || {};
+    var records = SkillEffects.occurrences(state, definition.source || 'potential') || [];
+    var counts = Object.create(null);
+    records.forEach(function (record) {
+      var word = record && record.word ? record.word : record;
+      if (!word || (entry.family && (word.family || word.skill) !== entry.family)) return;
+      if (!effectTraitMatches(word, entry.traits && entry.traits.length ? entry.traits : entry.trait)) return;
+      if (!word.text) return;
+      counts[word.text] = (counts[word.text] || 0) + 1;
+    });
+    return Object.keys(counts).map(function (text) {
+      return { text: text, count: counts[text] };
+    }).sort(function (a, b) {
+      return b.count - a.count || a.text.localeCompare(b.text);
+    });
+  }
+
+  function localizedEffectName(entry) {
+    var definition = entry.definition || {};
+    if (I18n.locale() === 'zh-CN') {
+      return definition.nameZh || definition.name || entry.trait || entry.id;
+    }
+    return definition.name || definition.nameZh || entry.trait || entry.id;
+  }
+
+  function localizedEffectDescription(entry) {
+    var definition = entry.definition || {};
+    if (I18n.locale() === 'zh-CN') {
+      return definition.descriptionZh || definition.description || '';
+    }
+    return definition.description || definition.descriptionZh || '';
+  }
+
+  function formatEffectPotency(value) {
+    var number = Number(value);
+    if (number !== number) return '0.00';
+    if (!isFinite(number)) return number > 0 ? 'MAX' : '0.00';
+    if (number >= 1000) return number.toExponential(1);
+    return number >= 10 ? number.toFixed(1) : number.toFixed(2);
+  }
+
+  function renderSkillEffects(state) {
+    if (!els.skillEffectSummary || !els.skillEffectList) return;
+    els.skillEffectList.innerHTML = '';
+    els.skillEffectSummary.classList.remove('show');
+    els.skillEffectSummary.setAttribute('aria-hidden', 'true');
+    if (els.skillEffectCount) els.skillEffectCount.textContent = '';
+    if (els.skillEffectTitle) {
+      els.skillEffectTitle.textContent = I18n.locale() === 'zh-CN' ? '\u5f53\u524d\u5b50\u6548\u679c' : 'Current effects';
+    }
+    if (!window.SkillEffects || typeof SkillEffects.active !== 'function') return;
+
+    var active = (SkillEffects.active(state) || []).filter(function (entry) {
+      return entry && (entry.definition || entry.id);
+    });
+    if (!active.length) return;
+
+    var groups = Object.create(null);
+    var groupOrder = [];
+    active.forEach(function (entry) {
+      var family = entry.family || 'global';
+      if (!groups[family]) {
+        groups[family] = [];
+        groupOrder.push(family);
+      }
+      groups[family].push(entry);
+    });
+
+    groupOrder.forEach(function (family) {
+      var definition = SkillSystem.byId[family];
+      var group = document.createElement('section');
+      group.className = 'skill-effect-group';
+      var heading = document.createElement('div');
+      heading.className = 'skill-effect-group-heading';
+      if (definition) {
+        heading.style.setProperty('--skill-color', definition.color);
+        heading.textContent = definition.icon + ' ' + localizedSkillName(definition);
+      } else {
+        heading.textContent = family;
+      }
+      group.appendChild(heading);
+
+      var list = document.createElement('div');
+      list.className = 'skill-effect-group-list';
+      groups[family].forEach(function (entry) {
+        var effect = document.createElement('article');
+        effect.className = 'skill-effect-chip';
+        if (definition) {
+          effect.style.setProperty('--skill-color', definition.color);
+        }
+        var name = document.createElement('strong');
+        name.textContent = localizedEffectName(entry);
+        var sources = effectSourceWords(state, entry);
+        var sourceLabel = document.createElement('small');
+        if (sources.length) {
+          var visible = sources.slice(0, 3).map(function (source) {
+            return source.text.toUpperCase() + (source.count > 1 ? ' x' + source.count : '');
+          });
+          sourceLabel.textContent = visible.join(' / ') + (sources.length > 3 ? ' +' + (sources.length - 3) : '');
+        } else {
+          var traits = entry.traits && entry.traits.length ? entry.traits : (entry.trait ? [entry.trait] : []);
+          sourceLabel.textContent = traits.length ? traits.join(' / ') : (I18n.locale() === 'zh-CN' ? '\u5bb6\u65cf\u5e95\u5ea7' : 'family base');
+        }
+        var potency = document.createElement('b');
+        potency.textContent = I18n.t('potencyLabel', 'Potency') + ' ' + formatEffectPotency(entry.traitPotency);
+        var description = document.createElement('p');
+        description.textContent = localizedEffectDescription(entry);
+        effect.title = description.textContent || sourceLabel.textContent;
+        effect.appendChild(name);
+        effect.appendChild(sourceLabel);
+        effect.appendChild(potency);
+        if (description.textContent) effect.appendChild(description);
+        list.appendChild(effect);
+      });
+      group.appendChild(list);
+      els.skillEffectList.appendChild(group);
+    });
+
+    if (els.skillEffectCount) {
+      els.skillEffectCount.textContent = I18n.locale() === 'zh-CN'
+        ? active.length + '\u9879\u751f\u6548'
+        : active.length + ' active';
+    }
+    els.skillEffectSummary.classList.add('show');
+    els.skillEffectSummary.setAttribute('aria-hidden', 'false');
   }
 
   function localizedSkillName(definition) {
