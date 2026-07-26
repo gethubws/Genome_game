@@ -48,6 +48,12 @@
     state.recommendation.target = best ? best.word : null;
     state.recommendation.missing = bestMissing || [];
     state.recommendation.bestRegion = MapSystem.findBestRegionForLetters(state, state.recommendation.missing);
+    // Appending one letter can only create words that end at the new tail. WordSystem
+    // uses its trie here, so this remains cheap even with the full word list enabled.
+    state.recommendation.tailSuggestions = WordSystem.tailSuggestions(state.genome.letters, 26);
+    state.recommendation.nextLetters = state.recommendation.tailSuggestions.map(function (candidate) {
+      return candidate.letter;
+    });
     state.uiDirty = true;
   }
 

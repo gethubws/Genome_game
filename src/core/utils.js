@@ -60,6 +60,32 @@
     return Number(value).toFixed(digits);
   }
 
+  function logOnePlusExp(value) {
+    if (value === Infinity) return Infinity;
+    if (!isFinite(value)) return 0;
+    if (value > 40) return value;
+    if (value < -40) return Math.exp(value);
+    return Math.log1p(Math.exp(value));
+  }
+
+  // Shared visual language: equal combat power produces equal base body size.
+  // The asymptote keeps extreme expression multipliers inside the playfield.
+  function powerRadiusFromLog(logPower) {
+    var config = GameConfig.combat || {};
+    var base = typeof config.radiusBase === 'number' ? config.radiusBase : 10;
+    var maxBonus = typeof config.radiusMaxBonus === 'number' ? config.radiusMaxBonus : 52;
+    var logScale = typeof config.radiusLogScale === 'number' ? Math.max(0.1, config.radiusLogScale) : 6;
+    var logOnePlusPower = logOnePlusExp(logPower);
+    var progress = logOnePlusPower === Infinity ? 1 : 1 - Math.exp(-Math.max(0, logOnePlusPower) / logScale);
+    return base + Math.max(0, maxBonus) * progress;
+  }
+
+  function powerRadius(power) {
+    var safePower = Number(power);
+    if (!(safePower > 0)) return powerRadiusFromLog(-Infinity);
+    return powerRadiusFromLog(isFinite(safePower) ? Math.log(safePower) : Infinity);
+  }
+
   function worldToScreen(state, point) {
     return {
       x: point.x - state.camera.x + state.screen.width / 2,
@@ -111,6 +137,8 @@
     randomLetter: randomLetter,
     otherLetter: otherLetter,
     formatNumber: formatNumber,
+    powerRadius: powerRadius,
+    powerRadiusFromLog: powerRadiusFromLog,
     worldToScreen: worldToScreen,
     screenToWorld: screenToWorld,
     hsl: hsl,

@@ -277,7 +277,7 @@
           state.boss.active.power = state.boss.active.originalPower;
           state.boss.active = null;
         }
-        GameUI.toast(state, 'Boss bypassed', 'Layer ' + gate.layerIndex + ' boss remains behind you');
+        GameUI.toast(state, I18n.t('bossBypassed', 'Boss bypassed'), (I18n.locale() === 'zh-CN' ? '第 ' + gate.layerIndex + ' 层 Boss 仍留在身后' : 'Layer ' + gate.layerIndex + ' boss remains behind you'));
         state.recommendation.dirty = true;
         state.uiDirty = true;
       }
@@ -442,7 +442,7 @@
   }
 
   function describeRegion(region) {
-    if (!region) return 'scan nearby zones';
+    if (!region) return window.I18n && I18n.t ? I18n.t('bestRegionNone', 'scan nearby zones') : 'scan nearby zones';
     return region.name + ' / ' + region.letters.map(function (letter) { return letter.toUpperCase(); }).join('');
   }
 

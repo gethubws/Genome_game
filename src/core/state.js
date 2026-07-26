@@ -14,6 +14,7 @@
       screen: { width: canvas.clientWidth || config.width, height: canvas.clientHeight || config.height, dpr: 1 },
       time: 0,
       dt: 0,
+      tick: 0,
       started: false,
       paused: true,
       runOver: false,
@@ -35,8 +36,10 @@
         color: '#65e5ff',
         accent: '#64f0b6',
         visualFlags: {},
-        activeSlots: ['dash', 'shot', 'scan']
+        activeSlots: [null, null, null]
       },
+      growthPower: 0,
+      damageTaken: false,
       genome: {
         capacity: config.initialGenomeCapacity,
         letters: [],
@@ -48,21 +51,45 @@
         found: [],
         occurrences: [],
         multiplier: 1,
+        logMultiplier: 0,
+        multiplierDisplay: 'x1.00',
+        multiplierOverflow: false,
+        occurrenceCount: 0,
+        occurrenceCounts: {},
         unlocked: new Set(),
         globalUnlocked: new Set(JSON.parse(Utils.storageGet('gene-current-unlocked', '[]'))),
         potentialFound: [],
         potentialOccurrences: [],
         potentialMultiplier: 1,
+        potentialLogMultiplier: 0,
+        potentialMultiplierDisplay: 'x1.00',
+        potentialMultiplierOverflow: false,
+        potentialOccurrenceCount: 0,
+        potentialOccurrenceCounts: {},
         lastExpressionReason: 'birth'
       },
       skills: {
         scan: { cooldown: 0, active: false, age: 0, hits: new Set() },
         dash: { cooldown: 0, active: false, age: 0, direction: { x: 0, y: 1 }, boost: 1 },
-        shot: { cooldown: 0 }
+        shot: { cooldown: 0 },
+        nova: { cooldown: 0, active: false, age: 0, radius: 0 },
+        guard: { cooldown: 0, active: false, age: 0, duration: 0 },
+        freeze: { cooldown: 0 },
+        growth: { cooldown: 0, active: false, age: 0, duration: 0, charges: 0, multiplier: 1, totalBonus: 0 },
+        splice: { cooldown: 0, active: false, age: 0, duration: 0, movedCount: 0, lastSequence: '' },
+        echo: { cooldown: 0, active: false, age: 0, duration: 0, multiplier: 1, boost: 1, word: '', sourceMultiplier: 1 },
+        corrode: { cooldown: 0, active: false, age: 0, duration: 0, target: null, weaken: 0 }
+      },
+      skillInventory: {
+        unlocked: new Set(),
+        newlyUnlocked: [],
+        pendingSlots: [null, null, null]
       },
       enemies: [],
+      enemyBullets: [],
       bullets: [],
       particles: [],
+      shockwaves: [],
       floatingTexts: [],
       map: {
         seed: '',
@@ -80,7 +107,9 @@
         signature: '',
         target: null,
         missing: [],
-        bestRegion: null
+        bestRegion: null,
+        tailSuggestions: [],
+        nextLetters: []
       },
       clearImage: {
         status: 'idle',

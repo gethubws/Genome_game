@@ -1,5 +1,8 @@
 (function () {
   function shotLevel(state) {
+    if (window.SkillSystem && typeof SkillSystem.potency === 'function') {
+      return SkillSystem.potency(state, 'shot');
+    }
     var level = 0;
     ['shot', 'shoot', 'spit', 'bolt'].forEach(function (word) {
       if (state.words.unlocked.has(word)) level += 1;
@@ -61,7 +64,6 @@
       if (hit) {
         hit.power = Math.max(0.1, hit.power * (1 - bullet.weaken));
         hit.hurt = 0.45;
-        hit.revealed = Math.max(hit.revealed, 0.9);
         burst(state, bullet.x, bullet.y, bullet.color, 10);
         return false;
       }
@@ -87,6 +89,9 @@
   }
 
   window.ShotSkill = {
+    // `tryStart` is the common dispatcher contract; keep `tryFire` for
+    // callers from the original input path and older saves.
+    tryStart: tryFire,
     tryFire: tryFire,
     update: update,
     charge: charge,

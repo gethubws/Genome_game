@@ -31,7 +31,7 @@
   function maskedKey() {
     var key = getApiKey();
     if (!key) return '';
-    return 'saved locally';
+    return window.I18n ? I18n.t('savedLocally', 'saved locally') : 'saved locally';
   }
 
   function generateClearImage(state) {
@@ -75,10 +75,12 @@
     var words = state.words.found.map(function (word) { return word.text; }).slice(0, 10);
     var genome = state.genome.letters.join('').toUpperCase();
     var traits = Object.keys(state.player.visualFlags || {}).filter(function (key) { return state.player.visualFlags[key]; });
-    var power = window.CombatSystem ? CombatSystem.effectivePower(state).toFixed(1) : 'unknown';
+    var power = window.CombatSystem
+      ? CombatSystem.formatPower(CombatSystem.effectivePower(state), CombatSystem.effectiveLogPower && CombatSystem.effectiveLogPower(state))
+      : 'unknown';
 
     return [
-      'Square game victory portrait for a geometric sci-fi browser game called Gene Current.',
+      'Square game victory portrait for a geometric sci-fi browser game called Geometric Dive: Consume & Evolve.',
       'Create a bright cyan radar arena avatar made from abstract letters and clean polygonal gene shapes.',
       'Avoid realistic fish, gore, text labels, logos, UI, screenshots, or photorealism.',
       'Use crisp arcade concept art, luminous teal, cyan, magenta, gold accents, dark navy negative space.',
@@ -92,7 +94,7 @@
   function createClearRecord(state, prompt, image) {
     return {
       id: 'clear-' + Date.now().toString(36),
-      title: 'Cleared Genome',
+      title: window.I18n ? I18n.t('clearedGenome', 'Cleared Genome') : 'Cleared Genome',
       createdAt: new Date().toISOString(),
       image: image || '',
       thumbnail: image || '',

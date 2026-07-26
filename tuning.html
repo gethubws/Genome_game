@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>数值调试实验室 | 几何潜游</title>
+  <style>
+    :root{font-family:ui-sans-serif,system-ui,sans-serif;color:#edf8ff;background:#08122d}
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(circle at 15% 10%,#173d6b,#08122d 58%);min-height:100vh}
+    main{width:min(980px,calc(100% - 28px));margin:0 auto;padding:30px 0 48px}
+    header{display:flex;justify-content:space-between;align-items:end;gap:18px;border-bottom:1px solid #6d8ec044;padding-bottom:18px;margin-bottom:18px}
+    h1{margin:3px 0;font-size:clamp(26px,5vw,42px)}
+    h2{font-size:14px;color:#8fe8ff;margin:0 0 12px;text-transform:uppercase;letter-spacing:.04em}
+    p,small{color:#a9b8d5}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+    .card{background:#101e45dd;border:1px solid #8cb3ee2b;border-radius:8px;padding:16px}
+    .row{display:grid;grid-template-columns:1fr 130px;align-items:center;gap:12px;min-height:38px}
+    .row label{color:#dce7fa;font-size:13px}
+    .row input{width:100%;border:1px solid #8fb7ed44;border-radius:5px;padding:7px 8px;color:#fff;background:#081532}
+    .range-pair{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .actions{position:sticky;bottom:12px;display:flex;gap:10px;justify-content:flex-end;margin-top:18px;padding:12px;border:1px solid #8cb3ee2b;border-radius:8px;background:#0b1738e8;backdrop-filter:blur(8px)}
+    button{border:1px solid #69d9f955;border-radius:5px;padding:9px 14px;color:#edf8ff;background:#173966;cursor:pointer}
+    button.primary{color:#06152b;background:#65e5ff}
+    button.danger{border-color:#ff786866;background:#3d1e42}
+    #status{margin-right:auto;align-self:center;color:#8fe8ff;font-size:13px}
+    @media(max-width:680px){.grid{grid-template-columns:1fr}.row{grid-template-columns:1fr 112px}}
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <small>几何潜游：吞噬与进化</small>
+        <h1>数值调试实验室</h1>
+        <p>调整后保存，重新加载游戏即可生效。这是本地调试数据，不会改动游戏源码。</p>
+      </div>
+      <a href="index.html" style="color:#8fe8ff">返回游戏</a>
+    </header>
+    <div class="grid">
+      <section class="card">
+        <h2>玩家</h2>
+        <div class="row"><label for="playerBasePower">初始基础战力</label><input id="playerBasePower" type="number" step="0.1"></div>
+        <div class="row"><label for="moveSpeed">移动速度</label><input id="moveSpeed" type="number" step="1"></div>
+      </section>
+      <section class="card">
+        <h2>成长与碰撞</h2>
+        <div class="row"><label for="fishBase">成长鱼基础战力值</label><input id="fishBase" type="number" step="0.1"></div>
+        <div class="row"><label for="fishPerLayer">每层额外成长值</label><input id="fishPerLayer" type="number" step="0.1"></div>
+        <div class="row"><label for="consumeSizeRatio">吞噬所需体型比</label><input id="consumeSizeRatio" type="number" min="0.7" max="1.2" step="0.01"></div>
+      </section>
+      <section class="card">
+        <h2>层级难度</h2>
+        <div class="row"><label>各层基础战力</label><div class="range-pair"><input id="layer0" type="number" step="0.5"><input id="layer1" type="number" step="0.5"><input id="layer2" type="number" step="0.5"><input id="layer3" type="number" step="0.5"></div></div>
+        <div class="row"><label for="dangerPower">危险区额外战力</label><input id="dangerPower" type="number" step="0.5"></div>
+        <div class="row"><label for="targetCount">同屏目标敌人数</label><input id="targetCount" type="number" step="1"></div>
+      </section>
+      <section class="card">
+        <h2>敌人角色倍率</h2>
+        <div class="row"><label>成长鱼</label><div class="range-pair"><input id="growth0" type="number" step="0.01"><input id="growth1" type="number" step="0.01"></div></div>
+        <div class="row"><label>字母鱼</label><div class="range-pair"><input id="letter0" type="number" step="0.01"><input id="letter1" type="number" step="0.01"></div></div>
+        <div class="row"><label>Hunter / 追击</label><div class="range-pair"><input id="hunter0" type="number" step="0.01"><input id="hunter1" type="number" step="0.01"></div></div>
+        <div class="row"><label>Spitter / 远程</label><div class="range-pair"><input id="spitter0" type="number" step="0.01"><input id="spitter1" type="number" step="0.01"></div></div>
+        <div class="row"><label>Disruptor / 脉冲</label><div class="range-pair"><input id="disruptor0" type="number" step="0.01"><input id="disruptor1" type="number" step="0.01"></div></div>
+      </section>
+      <section class="card">
+        <h2>Boss 与体型曲线</h2>
+        <div class="row"><label for="bossReferencePower">20 槽平均战力基准</label><input id="bossReferencePower" type="number" min="0.1" step="0.1"></div>
+        <div class="row"><label>Boss 倍率（第 1 至 4 关）</label><div class="range-pair"><input id="bossMult0" type="number" min="0.1" step="0.1"><input id="bossMult1" type="number" min="0.1" step="0.1"><input id="bossMult2" type="number" min="0.1" step="0.1"><input id="bossMult3" type="number" min="0.1" step="0.1"></div></div>
+        <div class="row"><label for="radiusBase">体型基准半径</label><input id="radiusBase" type="number" min="0" step="0.1"></div>
+        <div class="row"><label for="radiusMaxBonus">最大额外半径</label><input id="radiusMaxBonus" type="number" min="1" step="0.5"></div>
+        <div class="row"><label for="radiusLogScale">体型收敛速度</label><input id="radiusLogScale" type="number" min="0.1" step="0.1"></div>
+      </section>
+    </div>
+    <div class="actions">
+      <span id="status">未保存修改</span>
+      <button id="reset" class="danger">恢复内置数值</button>
+      <button id="save" class="primary">保存并重新加载游戏</button>
+    </div>
+  </main>
+  <script src="src/core/config.js"></script>
+  <script>
+    (function () {
+      var cfg = window.GameConfig;
+      var key = 'geometric-dive-balance-v1';
+      var roleIds = ['growth', 'letter', 'hunter', 'spitter', 'disruptor'];
+      function val(id, value) { document.getElementById(id).value = value; }
+      function n(id) { return Number(document.getElementById(id).value); }
+      function load() {
+        val('playerBasePower', cfg.player.basePower);
+        val('moveSpeed', cfg.player.moveSpeed);
+        val('fishBase', cfg.growth.fishBase);
+        val('fishPerLayer', cfg.growth.fishPerLayer);
+        val('consumeSizeRatio', cfg.combat.consumeSizeRatio);
+        val('radiusBase', cfg.combat.radiusBase);
+        val('radiusMaxBonus', cfg.combat.radiusMaxBonus);
+        val('radiusLogScale', cfg.combat.radiusLogScale);
+        val('bossReferencePower', cfg.boss.referencePower);
+        cfg.boss.powerMultipliers.forEach(function (value, index) { val('bossMult' + index, value); });
+        val('dangerPower', cfg.enemies.dangerPower);
+        val('targetCount', cfg.enemies.targetCount);
+        cfg.enemies.layerPower.forEach(function (value, index) { val('layer' + index, value); });
+        roleIds.forEach(function (role) {
+          val(role + '0', cfg.enemies.rolePower[role][0]);
+          val(role + '1', cfg.enemies.rolePower[role][1]);
+        });
+      }
+      document.getElementById('save').onclick = function () {
+        var out = {
+          player: { basePower: n('playerBasePower'), moveSpeed: n('moveSpeed') },
+          growth: { fishBase: n('fishBase'), fishPerLayer: n('fishPerLayer') },
+          combat: {
+            consumeSizeRatio: n('consumeSizeRatio'),
+            radiusBase: n('radiusBase'),
+            radiusMaxBonus: n('radiusMaxBonus'),
+            radiusLogScale: n('radiusLogScale')
+          },
+          boss: {
+            referencePower: n('bossReferencePower'),
+            powerMultipliers: [0, 1, 2, 3].map(function (index) { return n('bossMult' + index); })
+          },
+          enemies: {
+            dangerPower: n('dangerPower'),
+            targetCount: n('targetCount'),
+            layerPower: [0, 1, 2, 3].map(function (index) { return n('layer' + index); }),
+            rolePower: {}
+          }
+        };
+        roleIds.forEach(function (role) { out.enemies.rolePower[role] = [n(role + '0'), n(role + '1')]; });
+        localStorage.setItem(key, JSON.stringify(out));
+        document.getElementById('status').textContent = '已保存，正在返回游戏…';
+        setTimeout(function () { location.href = 'index.html?balance=' + Date.now(); }, 180);
+      };
+      document.getElementById('reset').onclick = function () {
+        localStorage.removeItem(key);
+        location.reload();
+      };
+      load();
+    })();
+  </script>
+</body>
+</html>

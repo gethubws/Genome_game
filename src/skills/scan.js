@@ -1,5 +1,8 @@
 (function () {
   function scanLevel(state) {
+    if (window.SkillSystem && typeof SkillSystem.potency === 'function') {
+      return SkillSystem.potency(state, 'scan');
+    }
     var flags = state.player.visualFlags;
     var level = 0;
     if (flags.scanSkill) level += 1;
@@ -44,14 +47,6 @@
         enemy.revealed = skill.revealTime;
         enemy.revealScale = Math.max(enemy.revealScale, 0.3);
         skill.hits.add(enemy.id);
-        state.floatingTexts.push({
-          x: enemy.x,
-          y: enemy.y - enemy.radius - 22,
-          text: enemy.bias.toUpperCase(),
-          color: enemy.fixedDrop ? GameConfig.palette.gold : GameConfig.palette.cyan,
-          life: skill.revealTime,
-          maxLife: skill.revealTime
-        });
       }
     });
 

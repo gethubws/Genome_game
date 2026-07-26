@@ -8,6 +8,7 @@
     RenderSystem.resize(state);
     MapSystem.generate(state);
     seedOpeningGenome(state);
+    state.player.radius = CombatSystem.visualRadius(state);
     RecommendationSystem.update(state);
     InputSystem.setup(state);
     GameUI.init(state);
@@ -26,13 +27,22 @@
     var elapsed = Math.min(0.033, (now - lastTime) / 1000 || 0.016);
     lastTime = now;
     state.dt = elapsed;
+    state.tick += 1;
 
     if (state.started && !state.paused && !state.runOver) {
       state.time += elapsed;
+      state.player.radius = CombatSystem.visualRadius(state);
       InputSystem.updatePlayerMovement(state);
       DashSkill.update(state);
       ScanSkill.update(state);
       ShotSkill.update(state);
+      NovaSkill.update(state);
+      GuardSkill.update(state);
+      FreezeSkill.update(state);
+      GrowthSkill.update(state);
+      SpliceSkill.update(state);
+      EchoSkill.update(state);
+      CorrodeSkill.update(state);
       MapSystem.update(state);
       EnemySystem.update(state);
       CombatSystem.update(state);
@@ -48,8 +58,9 @@
   }
 
   function maybeAddAmbientParticles(state) {
-    if (state.particles.length > 180) return;
-    if (Math.random() > 0.55) return;
+    var density = window.SettingsSystem ? SettingsSystem.effectDensity() : 1;
+    if (state.particles.length > 180 * density) return;
+    if (Math.random() > 0.55 * density) return;
     var x = state.camera.x + Utils.rand(-state.screen.width * 0.55, state.screen.width * 0.55);
     var y = state.camera.y + Utils.rand(-state.screen.height * 0.5, state.screen.height * 0.62);
     state.particles.push(GameState.createParticle(x, y, Utils.rand(-8, 8), Utils.rand(-26, -8), 'rgba(189, 243, 255, 0.72)', Utils.rand(1.2, 2.4), Utils.rand(0.8, 2.2)));

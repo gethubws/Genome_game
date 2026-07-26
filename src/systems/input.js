@@ -2,6 +2,9 @@
   function setup(state) {
     window.addEventListener('keydown', function (event) {
       state.input.keys[event.key.toLowerCase()] = true;
+      if (event.key === '1' || event.key === '2' || event.key === '3') {
+        SkillSystem.activateSlot(state, Number(event.key) - 1);
+      }
       if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].indexOf(event.key.toLowerCase()) !== -1) {
         event.preventDefault();
       }
@@ -19,10 +22,10 @@
       updatePointer(state, event);
       if (event.button === 2) {
         state.input.pointer.right = true;
-        ScanSkill.tryStart(state);
+        SkillSystem.activate(state, 'scan');
       } else {
         state.input.pointer.down = true;
-        ShotSkill.tryFire(state);
+        SkillSystem.activate(state, 'shot');
       }
     });
 
@@ -36,9 +39,9 @@
       event.preventDefault();
     });
 
-    bindButton('scanButton', function () { ScanSkill.tryStart(state); });
-    bindButton('dashButton', function () { DashSkill.tryStart(state); });
-    bindButton('shotButton', function () { ShotSkill.tryFire(state); });
+    [0, 1, 2].forEach(function (slot) {
+      bindButton('skillSlot' + (slot + 1), function () { SkillSystem.activateSlot(state, slot); });
+    });
   }
 
   function bindButton(id, handler) {
@@ -80,9 +83,9 @@
       if (Math.abs(aimX) + Math.abs(aimY) > 6) player.angle = Math.atan2(aimY, aimX);
     }
 
-    if (keys[' '] || keys.shift) DashSkill.tryStart(state);
-    if (keys.k) ScanSkill.tryStart(state);
-    if (keys.j) ShotSkill.tryFire(state);
+    if (keys[' '] || keys.shift) SkillSystem.activate(state, 'dash');
+    if (keys.k) SkillSystem.activate(state, 'scan');
+    if (keys.j) SkillSystem.activate(state, 'shot');
 
     var speed = GameConfig.player.moveSpeed;
     player.vx += vector.x * speed * state.dt * 6;

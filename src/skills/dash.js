@@ -1,5 +1,8 @@
 (function () {
   function dashLevel(state) {
+    if (window.SkillSystem && typeof SkillSystem.potency === 'function') {
+      return SkillSystem.potency(state, 'dash');
+    }
     var level = 0;
     ['dash', 'rush', 'swim', 'sprint'].forEach(function (word) {
       if (state.words.unlocked.has(word)) level += 1;
