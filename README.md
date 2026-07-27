@@ -1,132 +1,164 @@
 # 几何潜游：吞噬与进化
 
-A lightweight browser prototype for the fish-gene game concept. It is built as static HTML/CSS/JS, so it can run without Unity, npm, or a build step.
+《几何潜游：吞噬与进化》是一款正在开发中的浏览器动作游戏原型。游戏保留了“大鱼吃小鱼”中体型与战斗力的直观关系，同时把字母收集、单词构筑和主动技能组合加入下潜流程。
 
-## How to run
+项目使用原生 HTML、CSS 与 JavaScript 编写，不依赖 Unity、npm 或构建工具。
 
-Open `index.html` in a browser. A local server is optional.
+## 游戏截图
 
-## Controls
+### 下潜与战斗
 
-- WASD or arrow keys: move
-- 1, 2, 3: trigger the equipped skill in that slot
-- Space or Shift: dash when Dash is equipped
-- J or left mouse: fire when Shot is equipped
-- K or right mouse: scan when Scan is equipped
-- UI skill slots trigger the equipped skill directly
+![下潜与战斗界面](docs/screenshots/gameplay.png)
 
-## Skill backpack
+### 技能背包与组合效果
 
-Linked words identify and unlock skill families in the current genome expression. The player can equip up to three unlocked skills. Each Boss node confirms the current expression and opens the backpack so the loadout can be changed before the next layer.
+![技能背包与组合效果](docs/screenshots/skill-backpack.png)
 
-Current skill families:
+### 中文设置界面
 
-- Dash: `dash`, `rush`, `sprint`, `speed`
-- Shot: `shot`, `shoot`, `spit`, `bolt`, `bite`
-- Nova: `nova`, `pulse`, `wave`, `blast`
-- Guard: `guard`, `shield`, `shell`, `armor`
-- Freeze: `freeze`, `cold`, `ice`, `slow`
-- Scan: `scan`, `see`, `eye`, `look`, `view`
-- Growth: `growth`, `grow`, `life`, `feed`
-- Splice: `splice`, `gene`, `genome`, `join`
-- Echo: `echo`, `repeat`, `word`, `voice`
-- Corrode: `corrode`, `decay`, `rust`, `poison`, `weaken`, `drain`
+![中文设置界面](docs/screenshots/settings.png)
 
-The runtime dictionary currently contains about 3,000 common English words. More than 2,000 of them map into one of these ten skill families, while the listed core words provide especially direct or strong affinity for their matching family.
+## 核心玩法
 
-## First slice goals
+玩家控制一条几何鱼向深处移动，吞噬较弱的生物、收集字母并调整自己的基因序列。体型会随战斗力变化，因此通常可以直接从视觉上判断敌我差距；少数特殊敌人会故意打破这种对应关系。
 
-The current prototype focuses on a playable vertical slice:
+当前基因组最多容纳 20 个字母。新字母从队尾进入，容量已满时，最前方的字母会被挤出。玩家需要在有限长度内同时考虑基础战力、单词倍率、技能来源和即将离开序列的字母。
 
-- Eat weaker enemies to gain letters only; ordinary enemies no longer grant permanent experience.
-- New letters enter the tail of the genome queue; when full, the oldest letter is pushed out.
-- Radar scan reveals nearby enemies' bias letters for a short time.
-- Enemy depth increases combat pressure and raises the probability of dropping each enemy's own bias letter.
-- Every continuous word occurrence in the current genome queue contributes immediately; overlapping and repeated occurrences are all counted.
-- The current genome string drives word multipliers, while visual traits and skill unlocks are confirmed at a Boss node.
-- Boss defeat confirms the expression, opens the skill backpack, grants its reward, and sets the next boss depth.
+### 无限重叠单词
 
-## Combat model
+词库目前包含 3,104 个英文单词。所有连续命中都会参与结算，允许无限重叠、包含与重复，不设置重复收益递减，也不限制一次基因表达的单词数量。
 
-Combat power is based on the current genome instead of accumulated eating experience:
+例如 `warear` 会同时识别：
+
+- `ware`
+- `war`
+- `area`
+- `are`
+- `ear`
+
+同一个单词在序列中出现多次时，每次出现都会独立贡献倍率。
+
+### 战斗力
+
+战斗力由字母、单词、成长战力和临时效果共同决定：
 
 ```text
-letter score = sum(value of each current genome letter)
-current word multiplier = product of every overlapping and repeated word occurrence in the genome string
-temporary multiplier = dash and other short-term effects
-combat power = ((letter score + base power) * current word multiplier + growth power) * temporary multiplier
+战斗力 = ((基础战力 + 字母战力) × 全部单词倍率 + 成长战力) × 临时倍率
 ```
 
-During normal play, each new letter immediately updates the current letter score and all matching word occurrences. A word may overlap another word or appear multiple times; every occurrence contributes. At a Boss node, the current expression is confirmed and the skill backpack becomes available. If the player collides with an enemy they cannot beat, the combat gap removes a number of factors from the front of the genome queue, naturally lowering combat power.
+- 字母鱼会提供新的基因字母。
+- 成长鱼不提供字母，而是增加固定成长战力。
+- 敌方攻击会先削减成长战力，储备耗尽后再破坏基因组。
+- 成长战力与基因组都耗尽后再次受到有效攻击，本轮游戏结束。
 
-Gold growth creatures do not drop letters. Each one grants a fixed amount of growth power, with deeper layers using larger fixed values. Because this power is additive, the same creature matters less to an already powerful build and stronger players naturally need to consume more of them. Enemy attacks remove stored growth power, so ordinary combat can temporarily weaken the player without introducing a health bar.
+## 技能体系
 
-## Failure
+当前版本包含 10 个技能家族、100 个词驱动技能效果，其中 2,278 个词已经归入技能体系。
 
-Damage passes through two non-health layers. Stored growth power is lost first. Once growth power reaches zero, later hits remove one to three unlocked genome factors. If both growth power and the genome are empty, the next effective hit triggers `Genome Collapse` and ends the run. The failure result records its cause, depth, expressed word count, and defeated Boss count.
+基础技能家族包括：
 
-Enemy power is set by map layer and regional danger rather than scaling with the player. Growth creatures and letter carriers occupy the lower part of each layer's range, while hunters, spitters, and disruptors occupy progressively more dangerous fixed bands. Rare reward guardians use roughly twice the local area's normal power.
+| 技能 | 主要作用 |
+| --- | --- |
+| 冲刺 | 快速移动，并在冲刺期间临时提高战斗力与体型 |
+| 射击 | 发射基因弹，远程削弱目标战斗力 |
+| 脉冲 | 对周围多个敌人造成范围削弱 |
+| 守护 | 抵挡下一次会损伤成长战力或基因组的攻击 |
+| 冻结 | 大范围减速敌人并中断部分攻击行为 |
+| 扫描 | 显示敌人的类型、战斗力、字母与奖励 |
+| 生长 | 强化接下来数次吞噬成长鱼的收益 |
+| 剪接 | 调整未锁定基因因子在序列中的位置 |
+| 回响 | 临时重复当前最强单词的倍率 |
+| 侵蚀 | 按比例削减强敌或 Boss 的战斗力 |
 
-Enemy information is hidden until Scan reveals it. A scanned target temporarily shows its role, combat power, and either its letter or fixed growth-power reward.
+玩家最多同时装备三个技能。技能由当前基因组中的对应单词实时供能：如果相关单词被挤出，技能仍会保留在装备槽中，但会暂时失去效果；重新组成对应单词后即可恢复。
 
-Visual roles:
+不同技能之间存在组合效果，例如冻结与射击可以形成“碎裂弹”，冻结与脉冲可以形成“破冰脉冲”。技能背包会显示当前装备、来源词、重复次数、效果强度、子效果与断电状态。
 
-- Growth: green circular core with a gold orbital ring; passive and always grants growth power.
-- Letter: cyan diamond core; carries a genome letter but hides it until scanned.
-- Hunter: red arrowhead silhouette; locks a route, then performs a fast charge.
-- Spitter: orange square body with a visible barrel; keeps range and leads the player's movement before firing.
-- Disruptor: purple hexagon with concentric rings; approaches to pulse range and charges an area attack.
-- Reward guardian: bright gold or magenta layered rings; territory-bound, rare, and substantially stronger than local enemies.
+## 敌人与生态
 
-Growth creatures make up at least half of the normal spawn pool. Some are generated as schools of four to six fish with one or two Hunter/Disruptor guards. The guards patrol the school center and only leave formation when the player enters the school's local danger radius; they return when the player backs away.
+敌人的战斗力由所在层级和区域危险度决定，不会跟随玩家战力动态缩放。
 
-## Abilities
+- **成长鱼**：数量最多、攻击性低，只提供固定成长战力。
+- **字母鱼**：携带基因字母，扫描后才能看见具体掉落。
+- **猎手**：平时移动较慢，接近后停顿并进行高速长距离冲刺。
+- **射手**：保持距离，预判玩家移动后发射投射物。
+- **干扰者**：蓄力后释放逐渐扩张的范围脉冲。
+- **珍稀守卫**：活动范围有限，战斗力显著高于同区域普通敌人，并提供额外奖励。
 
-- Dash temporarily boosts movement, combat power, and body size.
-- Shot fires a gene bolt that lowers one target's combat power.
-- Nova weakens every enemy in a nearby area.
-- Guard blocks the next effective hit to growth power or the genome.
-- Freeze slows enemies and disrupts their active behavior in a wide field.
-- Scan reveals enemy combat power, letters, and rewards for a limited time.
-- Growth empowers the next several growth-fish rewards.
-- Splice moves leading unlocked genome factors to the tail, allowing the current string to be rebuilt without deleting locked words.
-- Echo temporarily repeats the strongest currently expressed word multiplier.
-- Corrode removes a percentage of a strong enemy's or Boss's combat power.
+部分成长鱼会组成鱼群，并由猎手或干扰者守护。守卫只会在玩家进入鱼群危险范围后离开队形追击。
 
-Every matching word occurrence contributes affinity to its skill family. Overlapping words, repeated words, and matches contained inside longer words all count; the skill system does not impose a one-word-per-expression limit.
+## 关卡
 
-### Skill effect catalog
+当前流程包含四层下潜区域与四场 Boss 战。Boss 的目标战力以装满 20 槽后的参考战力为基础，依次约为 `2×`、`4×`、`8×` 和 `16×`。
 
-The ten active-skill families now contain ten word-driven effects each, for a total catalog of 100 effects. The playable dictionary contains 3,104 words, with 2,278 assigned to a skill family. Ordinary mapped words retain the family's base current and also receive one stable specialization, so the same word always unlocks the same effect branch. Each of the 80 non-base branches also has a unique semantic trigger word, while direct core words such as `dash`, `bolt`, `freeze`, `join`, `repeat`, and `rust` keep explicit variants and stronger affinity.
+玩家需要依靠单词倍率、成长战力与技能削弱突破数值门槛。击败 Boss 后会确认当前表达、获得奖励并打开技能背包，随后可以调整三槽构筑再进入下一层。
 
-Only effects supported by words in the live genome are active. The Boss reward backpack lists each active effect, its contributing words and repeated occurrence counts, and its current potency. Effect hooks are registered through `src/systems/skill-effects.js`; the four catalog waves live in `src/skills/effects-wave1.js` through `effects-wave4.js`.
+## 操作
 
-Visual words:
+| 按键 | 功能 |
+| --- | --- |
+| `WASD` / 方向键 | 移动 |
+| 鼠标 | 瞄准 |
+| `1` / `2` / `3` | 使用对应装备槽的技能 |
+| `Space` / `Shift` | 使用已装备的冲刺 |
+| `J` / 鼠标左键 | 使用已装备的射击 |
+| `K` / 鼠标右键 | 使用已装备的扫描 |
+| `Esc` | 打开设置 |
 
-- `red`, `blue`, `gold`, `dark`: recolor the avatar.
-- `fish`, `fin`, `tail`, `scale`: add body traits.
+## 运行方式
 
-## Future image generation note
+直接使用浏览器打开 `index.html` 即可运行。
 
-Runtime image generation is intentionally postponed. The plan is to call an image-generation API only at failure or successful clear, after the final expression is confirmed. The final generated avatar image, its combat power, and its expressed skills should be saved into a player record. This record design is still temporary and needs a proper name and data model later.
+也可以在项目目录启动本地静态服务器：
 
-The current avatar visuals are marked for a later polish pass. The first prototype keeps procedural sticker visuals so combat and gene rules can be tested first.
+```powershell
+python -m http.server 4173 --bind 127.0.0.1
+```
 
-## Current visual direction
+然后访问：
 
-The frontend is being restyled toward a clean geometric sci-fi arcade reference: a bright cyan radar arena, neon polygon targets, a pale segmented top HUD, a dark Expression panel, a bottom Genome Queue tile rack, and circular Scan/Dash/Shoot skill controls. Large reference images should be converted to smaller JPG/WebP previews before being used in Codex threads.
+```text
+http://127.0.0.1:4173/index.html
+```
 
-## Settings and tuning
+`tuning.html` 是独立的数值调试页面，可修改敌人、成长鱼、体型与 Boss 参考值。设置会保存在浏览器本地，不会修改源码。
 
-The settings panel supports Simplified Chinese and English, music and sound-effect volume, display options, control help, and run-related convenience settings. The current soundtrack is a temporary procedural loop that can be replaced later without changing game rules.
+## 设置与辅助功能
 
-Open `tuning.html` to adjust combat balance locally. Saved values are stored in the browser and can be removed with **恢复内置数值**. The built-in Boss targets use `2x`, `4x`, `8x`, and `16x` the configured 20-slot reference power.
+设置面板目前支持：
 
-## Module map
+- 简体中文与英文切换
+- 主音量、音乐音量和音效音量
+- 全部静音与切到后台时静音
+- 屏幕震动、闪光强度和战斗文字
+- 性能、标准和高画质模式
+- 全屏切换与恢复默认设置
 
-- `src/core/`: config, utilities, and state creation.
-- `src/systems/`: input, enemies, genome, words, combat, rendering.
-- `src/skills/`: one file per skill.
-- `src/ui/`: HUD, toasts, and boss reward modal.
+当前音乐为临时程序化循环，后续可以替换为正式配乐而不影响游戏规则。
 
-This structure is meant to keep each future ability or boss rule small and replaceable.
+## 测试
+
+测试文件均为可直接运行的 Node.js 脚本：
+
+```powershell
+Get-ChildItem tests/*.test.js | ForEach-Object { node $_.FullName }
+```
+
+当前覆盖内容包括单词重叠、基因溢出、Boss 数值、扫描隐私、三槽技能、技能组合、100 个效果目录及四批效果行为。
+
+## 项目结构
+
+```text
+index.html              游戏入口
+styles.css              界面样式
+tuning.html             数值调试页面
+src/core/               配置、状态与通用工具
+src/data/               词库与技能词映射
+src/systems/            战斗、敌人、基因、单词、渲染等系统
+src/skills/             基础技能与四批扩展效果
+src/ui/                 HUD、提示与 Boss 奖励界面
+tests/                  独立测试脚本
+docs/screenshots/       README 使用的实际游戏截图
+```
+
+当前版本仍是用于验证核心玩法与构筑深度的浏览器原型，视觉表现、数值节奏、技能细分和正式音频仍会继续调整。
