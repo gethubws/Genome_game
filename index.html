@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>几何潜游：吞噬与进化</title>
+  <link rel="stylesheet" href="styles.css?v=20260726-5">
+</head>
+<body>
+  <main class="game-shell">
+    <canvas id="gameCanvas" aria-label="Geometric Dive game canvas"></canvas>
+
+    <button class="hud corner-button menu-button" type="button" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+    <button class="hud corner-button settings-button" type="button" aria-label="Settings" title="Settings">⚙</button>
+
+    <section class="start-screen show" id="startScreen" aria-label="Start menu">
+      <div class="start-card">
+        <small data-i18n="brandShort" data-i18n-en="Geometric Dive">几何潜游</small>
+        <h1 data-i18n="gameTitle" data-i18n-en="Geometric Dive: Consume & Evolve">几何潜游：吞噬与进化</h1>
+        <div class="start-actions" aria-label="Main actions">
+          <button class="start-action primary" id="enterGameButton" type="button" data-i18n="enterGame" data-i18n-en="Enter Game">Enter Game</button>
+          <button class="start-action secondary" id="openGalleryButton" type="button" data-i18n="gallery" data-i18n-en="Gallery">Gallery</button>
+        </div>
+        <div class="start-readout" aria-label="Run frame">
+          <span><b data-i18n="mode" data-i18n-en="Mode">Mode</b><strong data-i18n="fourGates" data-i18n-en="Four Gates">Four Gates</strong></span>
+          <span><b data-i18n="archive" data-i18n-en="Archive">Archive</b><strong id="galleryCount">0 Records</strong></span>
+          <span><b data-i18n="status" data-i18n-en="Status">Status</b><strong data-i18n="ready" data-i18n-en="Ready">Ready</strong></span>
+        </div>
+        <div class="image-key-panel" aria-label="Image API settings">
+          <label for="imageKeyInput" data-i18n="imageApi" data-i18n-en="Image API">图像 API</label>
+          <input id="imageKeyInput" type="password" autocomplete="off" placeholder="Paste key locally">
+          <button id="saveImageKeyButton" type="button" data-i18n="save" data-i18n-en="Save">保存</button>
+          <button id="clearImageKeyButton" type="button" data-i18n="clear" data-i18n-en="Clear">清除</button>
+          <span id="imageKeyStatus" data-i18n="notSaved" data-i18n-en="not saved">未保存</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="hud hud-top" aria-label="Run status">
+      <div class="stage-badge">
+        <span data-i18n="stage" data-i18n-en="Stage">Stage</span>
+        <strong id="stageValue">01</strong>
+      </div>
+      <div class="metric metric-depth">
+        <span data-i18n="depth" data-i18n-en="Depth">Depth</span>
+        <strong id="depthValue">0m</strong>
+      </div>
+      <div class="metric metric-power">
+        <span data-i18n="power" data-i18n-en="Power">Power</span>
+        <strong id="combatValue">1.0</strong>
+      </div>
+      <div class="metric metric-genome">
+        <span data-i18n="genome" data-i18n-en="Genome">Genome</span>
+        <strong id="capacityValue">0 / 20</strong>
+      </div>
+      <div class="metric metric-expression accent">
+        <span data-i18n="expression" data-i18n-en="Expression">Expression</span>
+        <strong id="multiplierValue">x1.00</strong>
+      </div>
+    </section>
+
+    <section class="hud word-panel" aria-label="Expression panel">
+      <div class="panel-title">
+        <span data-i18n="expression" data-i18n-en="Expression">Expression</span>
+        <small id="wordSummary">none yet</small>
+      </div>
+      <div id="wordList" class="word-list"></div>
+      <div class="expression-footer">
+        <span data-i18n="skillSnapshotMultiplier" data-i18n-en="Skill snapshot multiplier">技能快照倍率</span>
+        <strong id="settledMultiplier">x1.00</strong>
+        <i></i>
+      </div>
+    </section>
+
+    <section class="hud recommendation-panel" aria-label="Recommendation panel">
+      <div class="panel-title">
+        <span data-i18n="recommendation" data-i18n-en="Recommendation">Recommendation</span>
+        <small id="recommendationSummary">route hint</small>
+      </div>
+      <div class="recommendation-list">
+        <div><span data-i18n="targetWord" data-i18n-en="Target word">Target word</span><strong id="targetWord">none</strong></div>
+        <div><span data-i18n="missingLetters" data-i18n-en="Missing letters">Missing letters</span><strong id="missingLetters">-</strong></div>
+        <div><span data-i18n="bestRegion" data-i18n-en="Best region">Best region</span><strong id="bestRegion">scan nearby zones</strong></div>
+        <div class="tail-row">
+          <span data-i18n="tailWords" data-i18n-en="Tail completions">队尾成词</span>
+          <ul id="tailSuggestions" class="tail-suggestions" aria-live="polite">
+            <li class="tail-empty" data-i18n="noTailWords" data-i18n-en="No tail completions">暂无可成词</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="hud genome-panel" aria-label="Genome queue">
+      <div class="panel-title genome-title">
+        <span data-i18n="genomeQueue" data-i18n-en="Genome Queue">Genome Queue</span>
+        <small id="letterHint">scan, choose, descend</small>
+      </div>
+      <div class="queue-row">
+        <span class="queue-label" data-i18n="incoming" data-i18n-en="Incoming">Incoming</span>
+        <div id="genomeSlots" class="genome-slots"></div>
+      </div>
+      <div class="queue-outgoing" id="outgoingRow" hidden aria-live="polite">
+        <span class="queue-label" data-i18n="outgoing" data-i18n-en="Next displaced">满队列挤出</span>
+        <strong id="outgoingLetters">-</strong>
+        <small id="outgoingHint" data-i18n="outgoingHint" data-i18n-en="The next letter starts removing unlocked factors from the left.">下一字母进入时，从左侧未锁定字母开始挤出</small>
+      </div>
+      <div class="growth-readout"><span data-i18n="growthPower" data-i18n-en="Growth power">Growth power</span><strong id="growthValue">+0.0</strong><i><b id="growthMeter"></b></i></div>
+    </section>
+
+    <section class="hud ability-panel" aria-label="Abilities">
+      <div class="panel-title ability-title"><span data-i18n="skills" data-i18n-en="Skills">Skills</span></div>
+      <button class="ability empty" id="skillSlot1" type="button" data-slot="0">
+        <span class="slot-key">1</span><span class="icon">+</span>
+        <span class="label">Empty</span>
+        <span class="cooldown">locked</span>
+        <span class="meter"><i></i></span>
+      </button>
+      <button class="ability empty" id="skillSlot2" type="button" data-slot="1">
+        <span class="slot-key">2</span><span class="icon">+</span>
+        <span class="label">Empty</span>
+        <span class="cooldown">locked</span>
+        <span class="meter"><i></i></span>
+      </button>
+      <button class="ability empty" id="skillSlot3" type="button" data-slot="2">
+        <span class="slot-key">3</span><span class="icon">+</span>
+        <span class="label">Empty</span>
+        <span class="cooldown">locked</span>
+        <span class="meter"><i></i></span>
+      </button>
+    </section>
+
+    <section class="hud boss-panel" id="bossPanel" aria-label="Boss alert">
+      <span data-i18n="bossCurrent" data-i18n-en="Boss Current">Boss Current</span>
+      <strong id="bossStatus">300m</strong>
+      <small id="bossRequirement">第 1 关 · ×2 · 42</small>
+    </section>
+
+    <section class="toast-stack" id="toastStack" aria-live="polite"></section>
+    <div class="power-surge" id="powerSurge" aria-live="polite"><strong id="powerSurgeDelta"></strong><span id="powerSurgeTotal"></span></div>
+
+    <section class="evolution-modal" id="evolutionModal" aria-label="Evolution result" aria-hidden="true">
+      <div class="evolution-card">
+        <small data-i18n="evolutionCurrent" data-i18n-en="Evolution Result">Evolution Result</small>
+        <h1 id="evolutionTitle" data-i18n="genomeExpandedDefault" data-i18n-en="Genome Expanded">Genome Expanded</h1>
+        <p id="evolutionBody" data-i18n="newLettersEntered" data-i18n-en="New letters entered the current genome.">New letters entered the current genome.</p>
+        <div class="reward-row" id="rewardRow"></div>
+        <section class="skill-backpack" id="skillBackpack" aria-label="Skill backpack" aria-hidden="true">
+          <header><strong data-i18n="skillBackpack" data-i18n-en="Skill Backpack">Skill Backpack</strong><span data-i18n="selectThree" data-i18n-en="Select up to three skills">Select up to three skills</span></header>
+          <div class="equipped-slots" id="equippedSlots"></div>
+          <div class="skill-synergies" id="skillSynergies" aria-live="polite"></div>
+          <section class="skill-effect-summary" id="skillEffectSummary" aria-live="polite" aria-hidden="true">
+            <div class="skill-effect-header"><strong id="skillEffectTitle">Current effects</strong><span id="skillEffectCount"></span></div>
+            <div class="skill-effect-list" id="skillEffectList"></div>
+          </section>
+          <div class="skill-inventory" id="skillInventory"></div>
+        </section>
+        <div class="clear-image-panel" id="clearImagePanel" aria-live="polite">
+          <div class="clear-image-preview" id="clearImagePreview"></div>
+          <div class="clear-image-copy">
+            <strong id="clearImageStatus" data-i18n="finalImageIdle" data-i18n-en="Final image idle">Final image idle</strong>
+            <span id="clearImageDetail" data-i18n="waitingForClearData" data-i18n-en="Waiting for clear data.">Waiting for clear data.</span>
+          </div>
+        </div>
+        <button id="continueButton" type="button" data-i18n="diveOn" data-i18n-en="Dive On">Dive On</button>
+      </div>
+    </section>
+
+    <section class="gallery-modal" id="galleryModal" aria-label="Run gallery" aria-hidden="true">
+      <div class="gallery-card">
+        <header class="gallery-header">
+          <div>
+            <small data-i18n="runArchive" data-i18n-en="Run Archive">Run Archive</small>
+            <h2 data-i18n="galleryTitle" data-i18n-en="Gallery">Gallery</h2>
+          </div>
+          <button class="gallery-close" id="closeGalleryButton" type="button" aria-label="Close gallery">x</button>
+        </header>
+        <div class="gallery-grid" id="galleryGrid"></div>
+      </div>
+    </section>
+
+    <section class="settings-modal" id="settingsModal" aria-label="Settings" aria-hidden="true">
+      <div class="settings-card">
+        <header class="settings-header">
+          <div><small data-i18n="brandShort" data-i18n-en="Geometric Dive">几何潜游</small><h2 data-i18n="settings" data-i18n-en="Settings">Settings</h2><p data-i18n="settingsSub" data-i18n-en="Changes apply immediately">Changes apply immediately</p></div>
+          <button class="settings-close" id="closeSettingsButton" type="button" aria-label="Close">×</button>
+        </header>
+        <div class="settings-layout">
+          <section class="settings-group"><h3 data-i18n="language" data-i18n-en="Language">Language</h3>
+            <label class="setting-row"><span data-i18n="language" data-i18n-en="Language">Language</span><select id="languageSetting"><option value="zh-CN">简体中文</option><option value="en">English</option></select></label>
+          </section>
+          <section class="settings-group"><h3 data-i18n="audio" data-i18n-en="Audio">Audio</h3>
+            <label class="setting-row range-row"><span data-i18n="masterVolume" data-i18n-en="Master volume">Master volume</span><input id="masterVolume" type="range" min="0" max="1" step="0.01"><output></output></label>
+            <label class="setting-row range-row"><span data-i18n="musicVolume" data-i18n-en="Music volume">Music volume</span><input id="musicVolume" type="range" min="0" max="1" step="0.01"><output></output></label>
+            <label class="setting-row range-row"><span data-i18n="sfxVolume" data-i18n-en="Sound effects">Sound effects</span><input id="sfxVolume" type="range" min="0" max="1" step="0.01"><output></output></label>
+            <label class="setting-row toggle-row"><span data-i18n="mute" data-i18n-en="Mute all">Mute all</span><input id="muteSetting" type="checkbox"><i></i></label>
+            <label class="setting-row toggle-row"><span data-i18n="muteBackground" data-i18n-en="Mute when unfocused">Mute when unfocused</span><input id="backgroundMuteSetting" type="checkbox"><i></i></label>
+          </section>
+          <section class="settings-group"><h3 data-i18n="visuals" data-i18n-en="Visuals & accessibility">Visuals & accessibility</h3>
+            <label class="setting-row"><span data-i18n="screenShake" data-i18n-en="Screen shake">Screen shake</span><select id="shakeSetting"><option value="off" data-i18n="off" data-i18n-en="Off">Off</option><option value="low" data-i18n="low" data-i18n-en="Low">Low</option><option value="standard" data-i18n="standard" data-i18n-en="Standard">Standard</option></select></label>
+            <label class="setting-row"><span data-i18n="flash" data-i18n-en="Flash intensity">Flash intensity</span><select id="flashSetting"><option value="off" data-i18n="off" data-i18n-en="Off">Off</option><option value="soft" data-i18n="soft" data-i18n-en="Soft">Soft</option><option value="standard" data-i18n="standard" data-i18n-en="Standard">Standard</option></select></label>
+            <label class="setting-row"><span data-i18n="combatText" data-i18n-en="Combat text">Combat text</span><select id="combatTextSetting"><option value="full" data-i18n="full" data-i18n-en="Full">Full</option><option value="compact" data-i18n="compact" data-i18n-en="Compact">Compact</option><option value="off" data-i18n="off" data-i18n-en="Off">Off</option></select></label>
+            <label class="setting-row"><span data-i18n="quality" data-i18n-en="Graphics quality">Graphics quality</span><select id="qualitySetting"><option value="performance" data-i18n="performance" data-i18n-en="Performance">Performance</option><option value="standard" data-i18n="standard" data-i18n-en="Standard">Standard</option><option value="high" data-i18n="high" data-i18n-en="High">High</option></select></label>
+          </section>
+          <section class="settings-group"><h3 data-i18n="controls" data-i18n-en="Controls">Controls</h3><div class="control-grid"><span><kbd>WASD</kbd><b data-i18n="move" data-i18n-en="Move">Move</b></span><span><kbd>Mouse</kbd><b data-i18n="aim" data-i18n-en="Aim">Aim</b></span><span><kbd>1 2 3</kbd><b data-i18n="useSkills" data-i18n-en="Use skills">Use skills</b></span><span><kbd>Esc</kbd><b data-i18n="openSettings" data-i18n-en="Open settings">Open settings</b></span></div></section>
+        </div>
+        <footer class="settings-footer"><button id="fullscreenButton" type="button" data-i18n="enterFullscreen" data-i18n-en="Enter fullscreen">Enter fullscreen</button><a class="tuning-link" href="tuning.html" target="_blank" data-i18n="balanceLab" data-i18n-en="Open balance lab">打开数值调试</a><button id="resetSettingsButton" type="button" data-i18n="reset" data-i18n-en="Reset defaults">恢复默认设置</button></footer>
+      </div>
+    </section>
+  </main>
+
+  <script src="src/core/config.js?v=20260726-3"></script>
+  <script src="src/core/utils.js?v=20260726-3"></script>
+  <script src="src/systems/settings.js?v=20260726-3"></script>
+  <script src="src/systems/i18n.js?v=20260726-3"></script>
+  <script src="src/systems/audio.js?v=20260726-3"></script>
+  <script src="src/data/common-words.js?v=20260726-3"></script>
+  <script src="src/data/skill-word-map.js?v=20260726-3"></script>
+  <script src="src/data/skill-effect-traits.js?v=20260726-5"></script>
+  <script src="src/core/state.js?v=20260726-5"></script>
+  <script src="src/systems/words.js?v=20260726-5"></script>
+  <script src="src/systems/input.js?v=20260726-3"></script>
+  <script src="src/systems/map.js?v=20260726-3"></script>
+  <script src="src/systems/recommendations.js?v=20260726-3"></script>
+  <script src="src/systems/enemies.js?v=20260726-5"></script>
+  <script src="src/systems/genome.js?v=20260726-3"></script>
+  <script src="src/systems/combat.js?v=20260726-5"></script>
+  <script src="src/systems/images.js?v=20260726-3"></script>
+  <script src="src/skills/scan.js?v=20260726-5"></script>
+  <script src="src/skills/dash.js?v=20260726-5"></script>
+  <script src="src/skills/shot.js?v=20260726-5"></script>
+  <script src="src/skills/nova.js?v=20260726-5"></script>
+  <script src="src/skills/guard.js?v=20260726-5"></script>
+  <script src="src/skills/freeze.js?v=20260726-5"></script>
+  <script src="src/skills/growth.js?v=20260726-5"></script>
+  <script src="src/skills/splice.js?v=20260726-5"></script>
+  <script src="src/skills/echo.js?v=20260726-5"></script>
+  <script src="src/skills/corrode.js?v=20260726-5"></script>
+  <script src="src/systems/skills.js?v=20260726-5"></script>
+  <script src="src/systems/skill-effects.js?v=20260726-6"></script>
+  <script src="src/skills/effects-wave1.js?v=20260726-5"></script>
+  <script src="src/skills/effects-wave2.js?v=20260726-5"></script>
+  <script src="src/skills/effects-wave3.js?v=20260726-6"></script>
+  <script src="src/skills/effects-wave4.js?v=20260726-6"></script>
+  <script src="src/ui/hud.js?v=20260726-5"></script>
+  <script src="src/systems/render.js?v=20260726-5"></script>
+  <script src="src/game.js?v=20260726-3"></script>
+</body>
+</html>
